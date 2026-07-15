@@ -159,6 +159,20 @@
   .hint{background:var(--panel2);border:1px dashed var(--line);border-radius:12px;padding:12px;font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px}
   .hint b{color:var(--txt)}
   .fab-note{font-size:11px;color:var(--muted);text-align:center;margin-top:10px}
+
+  /* Gráfico circular (donut) */
+  .donutWrap{position:relative;width:180px;max-width:62%;margin:4px auto 16px}
+  .donutSvg{width:100%;display:block;transform:rotate(0deg)}
+  .donutSvg .seg{cursor:pointer;transition:stroke-width .15s}
+  .donutSvg .seg:hover{stroke-width:6.2}
+  .donutCtr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+  .dcT{font-size:11px;color:var(--muted);font-weight:600;line-height:1.3}
+  .dcV{font-size:17px;font-weight:700;line-height:1.2}
+  .legend{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
+  .lg{display:flex;align-items:center;gap:9px;font-size:14px;padding:7px 8px;border-radius:9px;cursor:pointer;background:var(--panel);border:1px solid var(--line)}
+  .lg:active{background:var(--panel2)}
+  .lg .ln{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lg .lv{color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -184,14 +198,14 @@
       <div class="card net"><div class="lbl">Disponible</div><div class="val" id="sumNet">€0</div></div>
     </div>
 
+    <div class="section-title" id="donutTitle" style="display:none">¿A dónde va tu dinero?</div>
+    <div id="donut"></div>
+
     <div class="section-title">Mis cuentas</div>
     <div class="table" id="acctList"></div>
     <div class="actions" style="margin-top:10px">
       <button class="btn btn-add" onclick="openAccount()">+ Añadir cuenta</button>
     </div>
-
-    <div class="section-title">Gasto por categoría</div>
-    <div id="catBreakdown"></div>
 
     <div class="section-title">Copia de seguridad</div>
     <div class="hint">Guarda TODOS tus datos en un archivo dentro de tu dispositivo. Si cambias de teléfono o pasa algo, podrás restaurarlos aquí.</div>
@@ -353,7 +367,7 @@ function renderAll(){
   const now=new Date();
   document.getElementById('periodLbl').textContent=
     now.toLocaleDateString('es-ES',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase());
-  renderAccounts(); renderIncomes(); renderExpenses(); renderCategories(); renderBreakdown(); renderProjections();
+  renderAccounts(); renderIncomes(); renderExpenses(); renderCategories(); renderDonut(); renderProjections();
   save();
 }
 
@@ -424,20 +438,43 @@ function renderCategories(){
   </div>`).join('');
 }
 
-function renderBreakdown(){
-  const el=document.getElementById('catBreakdown');
+let _donutItems=[];
+function renderDonut(){
+  const el=document.getElementById('donut');
+  const title=document.getElementById('donutTitle');
   const te=totalExpense();
-  if(!te){ el.innerHTML='<div class="empty">Sin gastos para mostrar.</div>'; return; }
+  if(!te){ el.innerHTML=''; if(title) title.style.display='none'; return; }
+  if(title) title.style.display='';
   const totals={};
   state.expenses.forEach(e=>{ totals[e.categoryId]=(totals[e.categoryId]||0)+Number(e.amount); });
-  const rows=Object.entries(totals).sort((a,b)=>b[1]-a[1]).map(([cid,val])=>{
-    const c=catById(cid); const pct=(val/te*100);
-    return `<div class="catbar">
-      <div class="top"><span><span class="dot" style="background:${c?c.color:'#64748b'}"></span> ${c?esc(c.name):'Otro'}</span><span>${money(val)} · ${pct.toFixed(0)}%</span></div>
-      <div class="track"><div class="fill" style="width:${pct}%;background:${c?c.color:'#64748b'}"></div></div>
-    </div>`;
+  _donutItems=Object.entries(totals).map(([cid,val])=>{
+    const c=catById(cid);
+    return {name:c?c.name:'Otro', color:c?c.color:'#64748b', val, pct:val/te*100};
+  }).sort((a,b)=>b.val-a.val);
+  let cum=0;
+  const segs=_donutItems.map((it,i)=>{
+    const seg=`<circle class="seg" data-i="${i}" onclick="donutPick(${i})" cx="21" cy="21" r="15.915" fill="transparent" stroke="${it.color}" stroke-width="5" stroke-dasharray="${it.pct.toFixed(2)} ${(100-it.pct).toFixed(2)}" stroke-dashoffset="${(25-cum).toFixed(2)}"></circle>`;
+    cum+=it.pct; return seg;
   }).join('');
-  el.innerHTML=rows;
+  const legend=_donutItems.map((it,i)=>`<div class="lg" onclick="donutPick(${i})">
+    <span class="dot" style="background:${it.color};width:12px;height:12px"></span>
+    <span class="ln">${esc(it.name)}</span>
+    <span class="lv">${it.pct.toFixed(0)}% · ${money(it.val)}</span></div>`).join('');
+  el.innerHTML=`
+    <div class="donutWrap">
+      <svg viewBox="0 0 42 42" class="donutSvg">
+        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="var(--panel2)" stroke-width="5"></circle>
+        ${segs}
+      </svg>
+      <div class="donutCtr" id="donutCtr"><div class="dcT">Total gastos</div><div class="dcV">${money(te)}</div></div>
+    </div>
+    <div class="legend">${legend}</div>`;
+}
+function donutPick(i){
+  const ctr=document.getElementById('donutCtr'); if(!ctr) return;
+  const it=_donutItems[i];
+  if(!it){ ctr.innerHTML=`<div class="dcT">Total gastos</div><div class="dcV">${money(totalExpense())}</div>`; return; }
+  ctr.innerHTML=`<div class="dcT" style="color:${it.color}">${esc(it.name)}</div><div class="dcV">${money(it.val)}</div><div class="dcT">${it.pct.toFixed(0)}%</div>`;
 }
 
 function renderProjections(){
