@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#0f766e"/>
+  <path d="M256 120c-75 0-136 61-136 136s61 136 136 136 136-61 136-136" fill="none" stroke="#14b8a6" stroke-width="34" stroke-linecap="round"/>
+  <text x="256" y="300" font-family="Segoe UI, Arial, sans-serif" font-size="150" font-weight="700" fill="#e8eefb" text-anchor="middle">€</text>
+</svg>
