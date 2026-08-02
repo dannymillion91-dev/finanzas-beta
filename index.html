@@ -173,6 +173,19 @@
   .lg:active{background:var(--panel2)}
   .lg .ln{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .lg .lv{color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap}
+
+  /* Gráfico de barras (tendencia semanal) */
+  .barsCard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 14px 12px;margin-bottom:6px}
+  .barsWrap{display:flex;align-items:flex-end;gap:14px;height:110px;padding:0 4px}
+  .bcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px}
+  .bval{font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap}
+  .bfill{width:70%;max-width:44px;border-radius:6px 6px 2px 2px;background:var(--panel2);min-height:3px;transition:height .3s}
+  .bcol.now .bfill{background:linear-gradient(180deg,var(--accent),var(--accent2))}
+  .bcol.now .bval{color:var(--accent)}
+  .blbl{font-size:11px;color:var(--muted);font-weight:600}
+  .bcol.now .blbl{color:var(--accent);font-weight:700}
+  .barsMsg{text-align:center;font-size:13px;color:var(--muted);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+  .barsMsg b{color:var(--txt)}
 </style>
 </head>
 <body>
@@ -200,6 +213,9 @@
 
     <div class="section-title" id="donutTitle" style="display:none">¿A dónde va tu dinero?</div>
     <div id="donut"></div>
+
+    <div class="section-title" id="barsTitle" style="display:none">Tendencia de gasto</div>
+    <div id="bars"></div>
 
     <div class="section-title">Mis cuentas</div>
     <div class="table" id="acctList"></div>
@@ -367,7 +383,7 @@ function renderAll(){
   const now=new Date();
   document.getElementById('periodLbl').textContent=
     now.toLocaleDateString('es-ES',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase());
-  renderAccounts(); renderIncomes(); renderExpenses(); renderCategories(); renderDonut(); renderProjections();
+  renderAccounts(); renderIncomes(); renderExpenses(); renderCategories(); renderDonut(); renderBars(); renderProjections();
   save();
 }
 
@@ -470,6 +486,45 @@ function renderDonut(){
     </div>
     <div class="legend">${legend}</div>`;
 }
+function renderBars(){
+  const el=document.getElementById('bars');
+  const title=document.getElementById('barsTitle');
+  if(!state.expenses.length){ el.innerHTML=''; if(title) title.style.display='none'; return; }
+  if(title) title.style.display='';
+  // lunes de esta semana a las 00:00
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const lunes=new Date(hoy); lunes.setDate(hoy.getDate()-((hoy.getDay()+6)%7));
+  const semanas=[];
+  for(let i=3;i>=0;i--){
+    const ini=new Date(lunes); ini.setDate(lunes.getDate()-i*7);
+    const fin=new Date(ini); fin.setDate(ini.getDate()+7);
+    const iniISO=ini.toISOString().slice(0,10), finISO=fin.toISOString().slice(0,10);
+    const total=state.expenses.reduce((s,e)=>(e.date>=iniISO&&e.date<finISO)?s+Number(e.amount):s,0);
+    const d1=ini.getDate(), m1=ini.toLocaleDateString('es-ES',{month:'short'}).replace('.','');
+    semanas.push({total,lbl:d1+' '+m1,now:i===0});
+  }
+  const max=Math.max(...semanas.map(s=>s.total),1);
+  const cols=semanas.map(s=>`<div class="bcol ${s.now?'now':''}">
+    <div class="bval">${s.total>0?money(s.total):'—'}</div>
+    <div class="bfill" style="height:${Math.max(3,s.total/max*100)}%"></div>
+    <div class="blbl">${s.now?'Ahora':s.lbl}</div>
+  </div>`).join('');
+  // mensaje: esta semana vs promedio de semanas anteriores con datos
+  const previas=semanas.slice(0,3).filter(s=>s.total>0);
+  let msg='Gasto por semana (últimas 4 semanas).';
+  if(previas.length){
+    const prom=previas.reduce((s,x)=>s+x.total,0)/previas.length;
+    const actual=semanas[3].total;
+    if(prom>0){
+      const dif=Math.round((actual-prom)/prom*100);
+      if(dif<=-5) msg=`📉 Esta semana llevas <b>${Math.abs(dif)}% menos</b> que tu promedio. ¡Bien!`;
+      else if(dif>=5) msg=`📈 Esta semana llevas <b>${dif}% más</b> que tu promedio.`;
+      else msg=`➡️ Esta semana vas <b>igual que tu promedio</b>.`;
+    }
+  }
+  el.innerHTML=`<div class="barsCard"><div class="barsWrap">${cols}</div><div class="barsMsg">${msg}</div></div>`;
+}
+
 function donutPick(i){
   const ctr=document.getElementById('donutCtr'); if(!ctr) return;
   const it=_donutItems[i];
