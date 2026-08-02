@@ -160,30 +160,42 @@
   .hint b{color:var(--txt)}
   .fab-note{font-size:11px;color:var(--muted);text-align:center;margin-top:10px}
 
-  /* Gráfico circular (donut) */
-  .donutWrap{position:relative;width:180px;max-width:62%;margin:4px auto 16px}
-  .donutSvg{width:100%;display:block;transform:rotate(0deg)}
-  .donutSvg .seg{cursor:pointer;transition:stroke-width .15s}
-  .donutSvg .seg:hover{stroke-width:6.2}
-  .donutCtr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
-  .dcT{font-size:11px;color:var(--muted);font-weight:600;line-height:1.3}
-  .dcV{font-size:17px;font-weight:700;line-height:1.2}
-  .legend{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
-  .lg{display:flex;align-items:center;gap:9px;font-size:14px;padding:7px 8px;border-radius:9px;cursor:pointer;background:var(--panel);border:1px solid var(--line)}
+  /* Gráfico circular (pastel) */
+  .pieCard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 14px;margin-bottom:6px}
+  .pieHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+  .pieHead .ph1{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  .pieHead .ph2{font-size:17px;font-weight:700}
+  .pieWrap{width:200px;max-width:70%;margin:0 auto}
+  .pieWrap svg{width:100%;display:block;overflow:visible}
+  .slice{cursor:pointer;transition:transform .18s ease;stroke:var(--panel);stroke-width:2}
+  .plabel{font-size:12px;font-weight:700;fill:#fff;pointer-events:none;text-anchor:middle;paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:2px}
+  .pieDetail{display:flex;align-items:center;justify-content:center;min-height:34px;margin-top:12px}
+  .pieDetail .pd{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:6px 14px;display:flex;gap:8px;align-items:center;font-size:14px;font-weight:600}
+  .pieDetail .pdHint{font-size:12px;color:var(--muted)}
+  .legend{display:flex;flex-direction:column;margin-top:10px}
+  .lg{display:flex;align-items:center;gap:10px;font-size:14px;padding:9px 6px;cursor:pointer;border-bottom:1px solid var(--line)}
+  .lg:last-child{border-bottom:none}
   .lg:active{background:var(--panel2)}
-  .lg .ln{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .lg .lv{color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap}
+  .lg .ln{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+  .lg .lp{font-weight:700;width:42px;text-align:right}
+  .lg .lv{color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap;width:86px;text-align:right}
 
   /* Gráfico de barras (tendencia semanal) */
   .barsCard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 14px 12px;margin-bottom:6px}
-  .barsWrap{display:flex;align-items:flex-end;gap:14px;height:110px;padding:0 4px}
-  .bcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px}
-  .bval{font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap}
-  .bfill{width:70%;max-width:44px;border-radius:6px 6px 2px 2px;background:var(--panel2);min-height:3px;transition:height .3s}
-  .bcol.now .bfill{background:linear-gradient(180deg,var(--accent),var(--accent2))}
+  .bChart{position:relative;height:140px;margin-top:4px}
+  .bGrid{position:absolute;left:44px;right:0;height:0;border-top:1px dashed rgba(147,161,189,.22)}
+  .bGrid span{position:absolute;left:-44px;top:-7px;width:38px;text-align:right;font-size:10px;color:var(--muted);font-weight:600}
+  .bAvg{position:absolute;left:44px;right:0;height:0;border-top:2px dashed var(--amber);opacity:.75;z-index:2}
+  .bAvg span{position:absolute;right:0;top:-16px;font-size:10px;color:var(--amber);font-weight:700;background:var(--panel);padding:1px 5px;border-radius:5px}
+  .bCols{position:absolute;top:0;bottom:0;left:44px;right:0;display:flex;align-items:flex-end;gap:14px;padding:0 6px;z-index:1}
+  .bcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:5px}
+  .bval{font-size:10px;color:var(--muted);font-weight:700;white-space:nowrap}
+  .bfill{width:72%;max-width:46px;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,#3d4d6d,#2a3852);min-height:2px;transition:height .3s}
+  .bcol.now .bfill{background:linear-gradient(180deg,var(--accent),var(--accent2));box-shadow:0 0 16px rgba(20,184,166,.30)}
   .bcol.now .bval{color:var(--accent)}
-  .blbl{font-size:11px;color:var(--muted);font-weight:600}
-  .bcol.now .blbl{color:var(--accent);font-weight:700}
+  .bLbls{display:flex;gap:14px;padding:7px 6px 0 44px}
+  .bLbls span{flex:1;text-align:center;font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap}
+  .bLbls span.now{color:var(--accent);font-weight:700}
   .barsMsg{text-align:center;font-size:13px;color:var(--muted);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
   .barsMsg b{color:var(--txt)}
 </style>
@@ -454,7 +466,7 @@ function renderCategories(){
   </div>`).join('');
 }
 
-let _donutItems=[];
+let _pieItems=[], _pieSel=-1;
 function renderDonut(){
   const el=document.getElementById('donut');
   const title=document.getElementById('donutTitle');
@@ -463,28 +475,43 @@ function renderDonut(){
   if(title) title.style.display='';
   const totals={};
   state.expenses.forEach(e=>{ totals[e.categoryId]=(totals[e.categoryId]||0)+Number(e.amount); });
-  _donutItems=Object.entries(totals).map(([cid,val])=>{
+  _pieItems=Object.entries(totals).map(([cid,val])=>{
     const c=catById(cid);
     return {name:c?c.name:'Otro', color:c?c.color:'#64748b', val, pct:val/te*100};
   }).sort((a,b)=>b.val-a.val);
-  let cum=0;
-  const segs=_donutItems.map((it,i)=>{
-    const seg=`<circle class="seg" data-i="${i}" onclick="donutPick(${i})" cx="21" cy="21" r="15.915" fill="transparent" stroke="${it.color}" stroke-width="5" stroke-dasharray="${it.pct.toFixed(2)} ${(100-it.pct).toFixed(2)}" stroke-dashoffset="${(25-cum).toFixed(2)}"></circle>`;
-    cum+=it.pct; return seg;
-  }).join('');
-  const legend=_donutItems.map((it,i)=>`<div class="lg" onclick="donutPick(${i})">
+  _pieSel=-1;
+  const cx=100, cy=100, r=88;
+  let paths='', labels='';
+  if(_pieItems.length===1){
+    paths=`<circle class="slice" data-i="0" data-mx="0" data-my="0" onclick="donutPick(0)" cx="${cx}" cy="${cy}" r="${r}" fill="${_pieItems[0].color}"></circle>`;
+    labels=`<text class="plabel" x="${cx}" y="${cy+4}">100%</text>`;
+  }else{
+    let ang=-90;
+    _pieItems.forEach((it,i)=>{
+      const a0=ang, a1=ang+it.pct*3.6; ang=a1;
+      const rad=d=>d*Math.PI/180;
+      const x0=cx+r*Math.cos(rad(a0)), y0=cy+r*Math.sin(rad(a0));
+      const x1=cx+r*Math.cos(rad(a1)), y1=cy+r*Math.sin(rad(a1));
+      const large=(a1-a0)>180?1:0;
+      const mid=rad((a0+a1)/2);
+      paths+=`<path class="slice" data-i="${i}" data-mx="${Math.cos(mid).toFixed(3)}" data-my="${Math.sin(mid).toFixed(3)}" onclick="donutPick(${i})" d="M${cx} ${cy} L${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z" fill="${it.color}"></path>`;
+      if(it.pct>=7){
+        const lx=cx+r*0.62*Math.cos(mid), ly=cy+r*0.62*Math.sin(mid);
+        labels+=`<text class="plabel" x="${lx.toFixed(1)}" y="${(ly+4).toFixed(1)}">${it.pct.toFixed(0)}%</text>`;
+      }
+    });
+  }
+  const legend=_pieItems.map((it,i)=>`<div class="lg" onclick="donutPick(${i})">
     <span class="dot" style="background:${it.color};width:12px;height:12px"></span>
     <span class="ln">${esc(it.name)}</span>
-    <span class="lv">${it.pct.toFixed(0)}% · ${money(it.val)}</span></div>`).join('');
-  el.innerHTML=`
-    <div class="donutWrap">
-      <svg viewBox="0 0 42 42" class="donutSvg">
-        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="var(--panel2)" stroke-width="5"></circle>
-        ${segs}
-      </svg>
-      <div class="donutCtr" id="donutCtr"><div class="dcT">Total gastos</div><div class="dcV">${money(te)}</div></div>
-    </div>
-    <div class="legend">${legend}</div>`;
+    <span class="lp">${it.pct.toFixed(0)}%</span>
+    <span class="lv">${money(it.val)}</span></div>`).join('');
+  el.innerHTML=`<div class="pieCard">
+    <div class="pieHead"><span class="ph1">Total gastos</span><span class="ph2">${money(te)}</span></div>
+    <div class="pieWrap"><svg viewBox="0 0 200 200">${paths}${labels}</svg></div>
+    <div class="pieDetail" id="pieDetail"><span class="pdHint">Toca un trozo del pastel para ver su detalle</span></div>
+    <div class="legend">${legend}</div>
+  </div>`;
 }
 function renderBars(){
   const el=document.getElementById('bars');
@@ -503,17 +530,24 @@ function renderBars(){
     const d1=ini.getDate(), m1=ini.toLocaleDateString('es-ES',{month:'short'}).replace('.','');
     semanas.push({total,lbl:d1+' '+m1,now:i===0});
   }
-  const max=Math.max(...semanas.map(s=>s.total),1);
+  // techo "bonito" para la escala (100, 150, 200, 250...)
+  const maxVal=Math.max(...semanas.map(s=>s.total),1);
+  const p=Math.pow(10,Math.floor(Math.log10(maxVal)));
+  let top=10*p;
+  for(const m of [1,1.5,2,2.5,3,4,5,6,8,10]){ if(m*p>=maxVal){ top=m*p; break; } }
+  const eur0=n=>CUR+Math.round(n).toLocaleString('es-ES');
   const cols=semanas.map(s=>`<div class="bcol ${s.now?'now':''}">
-    <div class="bval">${s.total>0?money(s.total):'—'}</div>
-    <div class="bfill" style="height:${Math.max(3,s.total/max*100)}%"></div>
-    <div class="blbl">${s.now?'Ahora':s.lbl}</div>
+    <div class="bval">${s.total>0?eur0(s.total):'—'}</div>
+    <div class="bfill" style="height:${Math.max(2,Math.min(96,s.total/top*100)).toFixed(1)}%"></div>
   </div>`).join('');
-  // mensaje: esta semana vs promedio de semanas anteriores con datos
+  const lbls=semanas.map(s=>`<span class="${s.now?'now':''}">${s.now?'Esta semana':s.lbl}</span>`).join('');
+  // línea de promedio + mensaje comparativo
   const previas=semanas.slice(0,3).filter(s=>s.total>0);
-  let msg='Gasto por semana (últimas 4 semanas).';
+  let msg='Tu gasto semanal de las últimas 4 semanas.';
+  let avgLine='';
   if(previas.length){
     const prom=previas.reduce((s,x)=>s+x.total,0)/previas.length;
+    avgLine=`<div class="bAvg" style="bottom:${Math.min(96,prom/top*100).toFixed(1)}%"><span>promedio ${eur0(prom)}</span></div>`;
     const actual=semanas[3].total;
     if(prom>0){
       const dif=Math.round((actual-prom)/prom*100);
@@ -522,14 +556,37 @@ function renderBars(){
       else msg=`➡️ Esta semana vas <b>igual que tu promedio</b>.`;
     }
   }
-  el.innerHTML=`<div class="barsCard"><div class="barsWrap">${cols}</div><div class="barsMsg">${msg}</div></div>`;
+  el.innerHTML=`<div class="barsCard">
+    <div class="bChart">
+      <div class="bGrid" style="top:0"><span>${eur0(top)}</span></div>
+      <div class="bGrid" style="top:50%"><span>${eur0(top/2)}</span></div>
+      <div class="bGrid" style="bottom:0"><span>${CUR}0</span></div>
+      ${avgLine}
+      <div class="bCols">${cols}</div>
+    </div>
+    <div class="bLbls">${lbls}</div>
+    <div class="barsMsg">${msg}</div>
+  </div>`;
 }
 
 function donutPick(i){
-  const ctr=document.getElementById('donutCtr'); if(!ctr) return;
-  const it=_donutItems[i];
-  if(!it){ ctr.innerHTML=`<div class="dcT">Total gastos</div><div class="dcV">${money(totalExpense())}</div>`; return; }
-  ctr.innerHTML=`<div class="dcT" style="color:${it.color}">${esc(it.name)}</div><div class="dcV">${money(it.val)}</div><div class="dcT">${it.pct.toFixed(0)}%</div>`;
+  const det=document.getElementById('pieDetail'); if(!det) return;
+  const slices=document.querySelectorAll('#donut .slice');
+  if(_pieSel===i){
+    _pieSel=-1;
+    slices.forEach(s=>s.removeAttribute('transform'));
+    det.innerHTML='<span class="pdHint">Toca un trozo del pastel para ver su detalle</span>';
+    return;
+  }
+  const it=_pieItems[i]; if(!it) return;
+  _pieSel=i;
+  slices.forEach(s=>{
+    if(Number(s.dataset.i)===i){
+      const dx=(parseFloat(s.dataset.mx)||0)*9, dy=(parseFloat(s.dataset.my)||0)*9;
+      s.setAttribute('transform',`translate(${dx.toFixed(1)} ${dy.toFixed(1)})`);
+    }else s.removeAttribute('transform');
+  });
+  det.innerHTML=`<span class="pd"><span class="dot" style="background:${it.color};width:11px;height:11px"></span>${esc(it.name)}: ${money(it.val)} · ${it.pct.toFixed(0)}%</span>`;
 }
 
 function renderProjections(){
