@@ -180,8 +180,13 @@
   .lg .lp{font-weight:700;width:42px;text-align:right}
   .lg .lv{color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap;width:86px;text-align:right}
 
-  /* Gráfico de barras (tendencia semanal) */
+  /* Gráfico de barras (tendencia) */
   .barsCard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 14px 12px;margin-bottom:6px}
+  .bTabs{display:flex;gap:6px;margin-bottom:14px}
+  .bTab{flex:1;padding:8px 4px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.3px}
+  .bTab.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+  .bCols.many{gap:8px}
+  .bLbls.many{gap:8px}
   .bChart{position:relative;height:140px;margin-top:4px}
   .bGrid{position:absolute;left:44px;right:0;height:0;border-top:1px dashed rgba(147,161,189,.22)}
   .bGrid span{position:absolute;left:-44px;top:-7px;width:38px;text-align:right;font-size:10px;color:var(--muted);font-weight:600}
@@ -360,7 +365,7 @@ function money(n){
   const v=Number(n)||0;
   return CUR+v.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
-function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function fmtDay(iso){ const [y,m,d]=iso.split('-'); return d+'/'+m; }
 function acctName(id){ const a=state.accounts.find(x=>x.id===id); return a?a.name:'—'; }
 function catById(id){ return state.categories.find(x=>x.id===id); }
@@ -513,58 +518,86 @@ function renderDonut(){
     <div class="legend">${legend}</div>
   </div>`;
 }
+let _barsMode=localStorage.getItem('misFinanzas_barsMode')||'sem';
+function setBarsMode(m){ _barsMode=m; localStorage.setItem('misFinanzas_barsMode',m); renderBars(); }
 function renderBars(){
   const el=document.getElementById('bars');
   const title=document.getElementById('barsTitle');
   if(!state.expenses.length){ el.innerHTML=''; if(title) title.style.display='none'; return; }
   if(title) title.style.display='';
-  // lunes de esta semana a las 00:00
+  const isoL=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   const hoy=new Date(); hoy.setHours(0,0,0,0);
-  const lunes=new Date(hoy); lunes.setDate(hoy.getDate()-((hoy.getDay()+6)%7));
-  const semanas=[];
-  for(let i=3;i>=0;i--){
-    const ini=new Date(lunes); ini.setDate(lunes.getDate()-i*7);
-    const fin=new Date(ini); fin.setDate(ini.getDate()+7);
-    const iniISO=ini.toISOString().slice(0,10), finISO=fin.toISOString().slice(0,10);
-    const total=state.expenses.reduce((s,e)=>(e.date>=iniISO&&e.date<finISO)?s+Number(e.amount):s,0);
-    const d1=ini.getDate(), m1=ini.toLocaleDateString('es-ES',{month:'short'}).replace('.','');
-    semanas.push({total,lbl:d1+' '+m1,now:i===0});
+  const DIAS=['D','L','M','X','J','V','S'];
+  const periodos=[];
+  if(_barsMode==='dia'){
+    // últimos 7 días
+    for(let i=6;i>=0;i--){
+      const ini=new Date(hoy); ini.setDate(hoy.getDate()-i);
+      const fin=new Date(ini); fin.setDate(ini.getDate()+1);
+      periodos.push({ini,fin,lbl:i===0?'Hoy':DIAS[ini.getDay()]+' '+ini.getDate(),now:i===0});
+    }
+  }else if(_barsMode==='mes'){
+    // últimos 6 meses
+    for(let i=5;i>=0;i--){
+      const ini=new Date(hoy.getFullYear(),hoy.getMonth()-i,1);
+      const fin=new Date(hoy.getFullYear(),hoy.getMonth()-i+1,1);
+      periodos.push({ini,fin,lbl:ini.toLocaleDateString('es-ES',{month:'short'}).replace('.',''),now:i===0});
+    }
+  }else{
+    // últimas 4 semanas (lunes a domingo)
+    const lunes=new Date(hoy); lunes.setDate(hoy.getDate()-((hoy.getDay()+6)%7));
+    for(let i=3;i>=0;i--){
+      const ini=new Date(lunes); ini.setDate(lunes.getDate()-i*7);
+      const fin=new Date(ini); fin.setDate(ini.getDate()+7);
+      periodos.push({ini,fin,lbl:ini.getDate()+' '+ini.toLocaleDateString('es-ES',{month:'short'}).replace('.',''),now:i===0});
+    }
   }
+  periodos.forEach(pd=>{
+    const a=isoL(pd.ini), b=isoL(pd.fin);
+    pd.total=state.expenses.reduce((s,e)=>(e.date>=a&&e.date<b)?s+Number(e.amount):s,0);
+  });
+  const NOMBRE={dia:'Hoy',sem:'Esta semana',mes:'Este mes'};
+  const UNIDAD={dia:'diario',sem:'semanal',mes:'mensual'};
+  const BASE={dia:'Tu gasto de los últimos 7 días.',sem:'Tu gasto semanal de las últimas 4 semanas.',mes:'Tu gasto mensual de los últimos 6 meses.'};
   // techo "bonito" para la escala (100, 150, 200, 250...)
-  const maxVal=Math.max(...semanas.map(s=>s.total),1);
+  const maxVal=Math.max(...periodos.map(s=>s.total),1);
   const p=Math.pow(10,Math.floor(Math.log10(maxVal)));
   let top=10*p;
   for(const m of [1,1.5,2,2.5,3,4,5,6,8,10]){ if(m*p>=maxVal){ top=m*p; break; } }
   const eur0=n=>CUR+Math.round(n).toLocaleString('es-ES');
-  const cols=semanas.map(s=>`<div class="bcol ${s.now?'now':''}">
+  const many=periodos.length>4?' many':'';
+  const cols=periodos.map(s=>`<div class="bcol ${s.now?'now':''}">
     <div class="bval">${s.total>0?eur0(s.total):'—'}</div>
     <div class="bfill" style="height:${Math.max(2,Math.min(96,s.total/top*100)).toFixed(1)}%"></div>
   </div>`).join('');
-  const lbls=semanas.map(s=>`<span class="${s.now?'now':''}">${s.now?'Esta semana':s.lbl}</span>`).join('');
-  // línea de promedio + mensaje comparativo
-  const previas=semanas.slice(0,3).filter(s=>s.total>0);
-  let msg='Tu gasto semanal de las últimas 4 semanas.';
+  const lbls=periodos.map(s=>`<span class="${s.now?'now':''}">${s.now&&_barsMode==='sem'?'Esta semana':s.lbl}</span>`).join('');
+  // línea de promedio + mensaje comparativo (periodos anteriores con datos)
+  const previas=periodos.slice(0,-1).filter(s=>s.total>0);
+  let msg=BASE[_barsMode];
   let avgLine='';
   if(previas.length){
     const prom=previas.reduce((s,x)=>s+x.total,0)/previas.length;
     avgLine=`<div class="bAvg" style="bottom:${Math.min(96,prom/top*100).toFixed(1)}%"><span>promedio ${eur0(prom)}</span></div>`;
-    const actual=semanas[3].total;
+    const actual=periodos[periodos.length-1].total;
     if(prom>0){
       const dif=Math.round((actual-prom)/prom*100);
-      if(dif<=-5) msg=`📉 Esta semana llevas <b>${Math.abs(dif)}% menos</b> que tu promedio. ¡Bien!`;
-      else if(dif>=5) msg=`📈 Esta semana llevas <b>${dif}% más</b> que tu promedio.`;
-      else msg=`➡️ Esta semana vas <b>igual que tu promedio</b>.`;
+      const q=NOMBRE[_barsMode], u=UNIDAD[_barsMode];
+      if(dif<=-5) msg=`📉 ${q} llevas <b>${Math.abs(dif)}% menos</b> que tu promedio ${u}. ¡Bien!`;
+      else if(dif>=5) msg=`📈 ${q} llevas <b>${dif}% más</b> que tu promedio ${u}.`;
+      else msg=`➡️ ${q} vas <b>igual que tu promedio ${u}</b>.`;
     }
   }
+  const tab=(m,txt)=>`<button class="bTab ${_barsMode===m?'active':''}" onclick="setBarsMode('${m}')">${txt}</button>`;
   el.innerHTML=`<div class="barsCard">
+    <div class="bTabs">${tab('dia','Días')}${tab('sem','Semanas')}${tab('mes','Meses')}</div>
     <div class="bChart">
       <div class="bGrid" style="top:0"><span>${eur0(top)}</span></div>
       <div class="bGrid" style="top:50%"><span>${eur0(top/2)}</span></div>
       <div class="bGrid" style="bottom:0"><span>${CUR}0</span></div>
       ${avgLine}
-      <div class="bCols">${cols}</div>
+      <div class="bCols${many}">${cols}</div>
     </div>
-    <div class="bLbls">${lbls}</div>
+    <div class="bLbls${many}">${lbls}</div>
     <div class="barsMsg">${msg}</div>
   </div>`;
 }
