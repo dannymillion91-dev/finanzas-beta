@@ -165,10 +165,14 @@
   .pieHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
   .pieHead .ph1{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
   .pieHead .ph2{font-size:17px;font-weight:700}
-  .pieWrap{width:200px;max-width:70%;margin:0 auto}
+  .pieWrap{width:100%;max-width:290px;margin:0 auto}
   .pieWrap svg{width:100%;display:block;overflow:visible}
-  .slice{cursor:pointer;transition:transform .18s ease;stroke:var(--panel);stroke-width:2}
-  .plabel{font-size:12px;font-weight:700;fill:#fff;pointer-events:none;text-anchor:middle;paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:2px}
+  .slice3d{cursor:pointer}
+  .slice3d path{stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round;shape-rendering:geometricPrecision}
+  .plabel{font-size:13px;font-weight:800;fill:#fff;pointer-events:none;text-anchor:middle;paint-order:stroke;stroke:rgba(0,0,0,.5);stroke-width:2.6px}
+  .plabel.big{font-size:17px;letter-spacing:-.3px;stroke-width:3px}
+  .plabel.out{font-size:11px;stroke-width:2px;stroke:var(--panel)}
+  .plead{stroke:var(--muted);stroke-width:1;opacity:.8;pointer-events:none}
   .pieDetail{display:flex;align-items:center;justify-content:center;min-height:34px;margin-top:12px}
   .pieDetail .pd{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:6px 14px;display:flex;gap:8px;align-items:center;font-size:14px;font-weight:600}
   .pieDetail .pdHint{font-size:12px;color:var(--muted)}
@@ -472,6 +476,192 @@ function renderCategories(){
 }
 
 let _pieItems=[], _pieSel=-1;
+/* Geometría del pastel 3D: elipse (rx/ry) + altura escalonada (hMin..hMax) */
+/* Todos los bloques miden lo mismo de ancho; lo que cambia es la ALTURA,
+   proporcional a lo gastado (hMin = suelo para que los pequeños se vean). */
+const PIE={cx:100, cyB:150, rx:80, ry:38, hMin:26, hMax:128, out:12};
+const RAD=Math.PI/180;
+
+function _pieRGB(h){
+  h=String(h||'').trim().replace('#','');
+  if(h.length===3) h=h.split('').map(c=>c+c).join('');
+  const n=parseInt(h,16);
+  if(h.length!==6||isNaN(n)) return [100,116,139];
+  return [(n>>16)&255,(n>>8)&255,n&255];
+}
+/* Los tonos se hacen subiendo/bajando la LUZ manteniendo el color (HSL).
+   Mezclar con blanco o negro deslavaría el color: así se mantiene vivo. */
+function _pieHSL(hex){
+  const [R,G,B]=_pieRGB(hex).map(v=>v/255);
+  const mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2;
+  let h=0, s=0;
+  if(mx!==mn){
+    const d=mx-mn;
+    s = l>.5 ? d/(2-mx-mn) : d/(mx+mn);
+    h = mx===R ? (G-B)/d+(G<B?6:0) : mx===G ? (B-R)/d+2 : (R-G)/d+4;
+    h/=6;
+  }
+  return [h,s,l];
+}
+function _pieHex(h,s,l){
+  const f=n=>{
+    const k=(n+h*12)%12, a=s*Math.min(l,1-l);
+    return Math.round(255*(l-a*Math.max(-1,Math.min(k-3,Math.min(9-k,1)))));
+  };
+  return '#'+[f(0),f(8),f(4)].map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');
+}
+/* color base "pro": saturación alta y luz en su punto, sea cual sea el color
+   elegido. Se multiplica (no se suma) para que un gris siga siendo gris. */
+function _pieBase(hex){
+  const [h,s,l]=_pieHSL(hex);
+  return [h, Math.min(.95,s*1.3), Math.min(.6,Math.max(.45,l))];
+}
+/* dl = cuánta luz sube (+) o baja (-). Al oscurecer subo algo la saturación
+   para que las sombras tengan color y no se vean sucias. */
+function _pieTone(b,dl){
+  return _pieHex(b[0], Math.max(0,Math.min(1,b[1]+(dl<0?.06:-.02))), Math.max(.06,Math.min(.96,b[2]+dl)));
+}
+/* punto del borde a un ángulo dado, sobre la elipse centrada en cyy */
+function _pp(a,cyy){
+  return (PIE.cx+PIE.rx*Math.cos(a*RAD)).toFixed(2)+' '+(cyy+PIE.ry*Math.sin(a*RAD)).toFixed(2);
+}
+/* cara del corte: se ve cuando el vecino es más bajo o el trozo está separado */
+function _pieCut(it,a){
+  const t=PIE.cyB-it.h;
+  return `M${PIE.cx} ${t} L${_pp(a,t)} L${_pp(a,PIE.cyB)} L${PIE.cx} ${PIE.cyB} Z`;
+}
+/* el pastel se parte cada 90° para poder pintarlo de atrás hacia delante */
+function _pieParts(it){
+  const p=[it.a0];
+  for(let k=Math.ceil((it.a0+.2)/90); k<=Math.floor((it.a1-.2)/90); k++) p.push(k*90);
+  p.push(it.a1);
+  const out=[];
+  for(let k=0;k<p.length-1;k++) out.push([p[k],p[k+1]]);
+  return out;
+}
+function _pieDepth(s,e){ return Math.max(Math.sin(s*RAD),Math.sin(e*RAD)); }
+/* un tramo enseña pared si su centro mira al frente */
+function _pieVer(s,e){ return Math.sin(((s+e)/2)*RAD)>0; }
+/* tramo de pared visible de un trozo entero (o null si está todo al fondo) */
+function _pieFront(it){
+  const ps=_pieParts(it).filter(([s,e])=>_pieVer(s,e));
+  return ps.length?[ps[0][0], ps[ps.length-1][1]]:null;
+}
+/* un tramo: caras del corte + pared exterior (sólo la parte delantera) + tapa */
+function _pieUnit(it,i,s,e){
+  const t=PIE.cyB-it.h;
+  let o='';
+  /* el borde va pintado igual que el relleno: así no queda raya entre tramos,
+     y con stroke-linejoin:round redondea las esquinas de cada bloque */
+  if(Math.abs(s-it.a0)<.2 && Math.cos(it.a0*RAD)<0) o+=`<path d="${_pieCut(it,it.a0)}" fill="url(#pgA${i})" stroke="url(#pgA${i})"/>`;
+  if(Math.abs(e-it.a1)<.2 && Math.cos(it.a1*RAD)>0) o+=`<path d="${_pieCut(it,it.a1)}" fill="url(#pgB${i})" stroke="url(#pgB${i})"/>`;
+  if(_pieVer(s,e)){
+    const w=`M${_pp(s,t)} A${PIE.rx} ${PIE.ry} 0 0 1 ${_pp(e,t)} L${_pp(e,PIE.cyB)} A${PIE.rx} ${PIE.ry} 0 0 0 ${_pp(s,PIE.cyB)} Z`;
+    o+=`<path d="${w}" fill="url(#pgW${i})" stroke="url(#pgW${i})"/>`+
+       `<path d="${w}" fill="url(#pieSpec)" stroke="url(#pieSpec)"/>`;   /* brillo del cilindro */
+  }
+  const tp=`M${PIE.cx} ${t} L${_pp(s,t)} A${PIE.rx} ${PIE.ry} 0 0 1 ${_pp(e,t)} Z`;
+  o+=`<path d="${tp}" fill="url(#pgT${i})" stroke="url(#pgT${i})"/>`+
+     `<path d="${tp}" fill="url(#pieGloss)" stroke="url(#pieGloss)"/>`;  /* luz sobre la tapa */
+  return o;
+}
+/* % grande en la pared del bloque (como la imagen de referencia);
+   si el bloque no enseña pared o es muy estrecho, va fuera con una rayita */
+function _pieLabels(){
+  let dentro='', fuera=[];
+  _pieItems.forEach((it,i)=>{
+    const sel=(i===_pieSel);
+    const dx=sel?Math.cos(it.mid*RAD)*PIE.out:0, dy=sel?Math.sin(it.mid*RAD)*PIE.out*PIE.ry/PIE.rx:0;
+    const t=PIE.cyB-it.h, c=Math.cos(it.mid*RAD), s=Math.sin(it.mid*RAD);
+    const fr=_pieFront(it);
+    if(fr && fr[1]-fr[0]>=22){
+      /* enseña pared: el % va escrito en la pared, en grande */
+      const am=(fr[0]+fr[1])/2;
+      const x=PIE.cx+PIE.rx*Math.cos(am*RAD)+dx;
+      const y=(t+PIE.cyB)/2+PIE.ry*Math.sin(am*RAD)+dy+5;
+      dentro+=`<text class="plabel big" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${it.pct.toFixed(0)}%</text>`;
+    }else if(it.a1-it.a0>=25){
+      const x=PIE.cx+PIE.rx*.58*c+dx, y=t+PIE.ry*.58*s+dy+4;
+      dentro+=`<text class="plabel" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${it.pct.toFixed(0)}%</text>`;
+    }else{
+      fuera.push({pct:it.pct,
+        x1:PIE.cx+PIE.rx*.95*c+dx, y1:t+PIE.ry*.95*s+dy,
+        x2:PIE.cx+PIE.rx*1.22*c+dx, y2:t+PIE.ry*1.55*s-6+dy, der:c>=0});
+    }
+  });
+  /* si dos etiquetas de fuera se pisan, subo la segunda */
+  fuera.sort((a,b)=>a.x2-b.x2);
+  for(let k=1;k<fuera.length;k++){
+    const p=fuera[k-1], q=fuera[k];
+    if(Math.abs(q.x2-p.x2)<28 && Math.abs(q.y2-p.y2)<14) q.y2=p.y2-14;
+  }
+  return dentro+fuera.map(f=>
+    `<line class="plead" x1="${f.x1.toFixed(1)}" y1="${f.y1.toFixed(1)}" x2="${f.x2.toFixed(1)}" y2="${f.y2.toFixed(1)}"/>`+
+    `<text class="plabel out" x="${(f.x2+(f.der?4:-4)).toFixed(1)}" y="${(f.y2+3.5).toFixed(1)}" text-anchor="${f.der?'start':'end'}">${f.pct.toFixed(0)}%</text>`
+  ).join('');
+}
+
+function _pieSVG(){
+  const {cx,cyB,rx,ry,out}=PIE;
+  let defs='', cuerpo='', lbls='';
+  /* userSpaceOnUse: el degradado es el mismo para todos los tramos de un trozo
+     (si no, cada tramo tendría el suyo y se verían costuras) */
+  _pieItems.forEach((it,i)=>{
+    const t=cyB-it.h, b=_pieBase(it.color);
+    defs+=`<linearGradient id="pgT${i}" gradientUnits="userSpaceOnUse" x1="${cx-rx}" y1="${t-ry}" x2="${cx+rx*.7}" y2="${t+ry}">`+
+          `<stop offset="0" stop-color="${_pieTone(b,.16)}"/>`+
+          `<stop offset=".55" stop-color="${_pieTone(b,.03)}"/>`+
+          `<stop offset="1" stop-color="${_pieTone(b,-.04)}"/></linearGradient>`+
+          `<linearGradient id="pgW${i}" gradientUnits="userSpaceOnUse" x1="0" y1="${t-ry}" x2="0" y2="${cyB+ry}">`+
+          `<stop offset="0" stop-color="${_pieTone(b,.03)}"/>`+
+          `<stop offset=".18" stop-color="${_pieTone(b,.12)}"/>`+
+          `<stop offset=".55" stop-color="${_pieTone(b,-.11)}"/>`+
+          `<stop offset=".88" stop-color="${_pieTone(b,-.27)}"/>`+
+          `<stop offset="1" stop-color="${_pieTone(b,-.17)}"/></linearGradient>`+  /* rebote de luz abajo */
+          `<linearGradient id="pgA${i}" gradientUnits="userSpaceOnUse" x1="0" y1="${t-ry}" x2="0" y2="${cyB+ry}">`+
+          `<stop offset="0" stop-color="${_pieTone(b,-.12)}"/>`+
+          `<stop offset=".7" stop-color="${_pieTone(b,-.25)}"/>`+
+          `<stop offset="1" stop-color="${_pieTone(b,-.18)}"/></linearGradient>`+
+          `<linearGradient id="pgB${i}" gradientUnits="userSpaceOnUse" x1="0" y1="${t-ry}" x2="0" y2="${cyB+ry}">`+
+          `<stop offset="0" stop-color="${_pieTone(b,-.05)}"/>`+
+          `<stop offset=".7" stop-color="${_pieTone(b,-.18)}"/>`+
+          `<stop offset="1" stop-color="${_pieTone(b,-.1)}"/></linearGradient>`;
+  });
+  /* brillo especular del cilindro y luz suave sobre las tapas (una sola luz para todo) */
+  defs+=`<linearGradient id="pieSpec" gradientUnits="userSpaceOnUse" x1="${cx-rx}" y1="0" x2="${cx+rx}" y2="0">`+
+        `<stop offset="0" stop-color="#fff" stop-opacity="0"/>`+
+        `<stop offset=".3" stop-color="#fff" stop-opacity=".1"/>`+
+        `<stop offset=".42" stop-color="#fff" stop-opacity="0"/>`+
+        `<stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`+
+        `<linearGradient id="pieGloss" gradientUnits="userSpaceOnUse" x1="${cx-rx}" y1="0" x2="${cx+rx*.5}" y2="${cyB}">`+
+        `<stop offset="0" stop-color="#fff" stop-opacity=".13"/>`+
+        `<stop offset=".5" stop-color="#fff" stop-opacity=".02"/>`+
+        `<stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
+  /* Todos los tramos (incluido el separado) ordenados del fondo hacia delante.
+     El bloque elegido se aparta hacia fuera pero se pinta en su profundidad:
+     si está al fondo, da un paso ATRÁS y sigue detrás de los de delante. */
+  const tramos=[];
+  _pieItems.forEach((it,i)=>{
+    const sep=(i===_pieSel);
+    const dx=sep?Math.cos(it.mid*RAD)*out:0, dy=sep?Math.sin(it.mid*RAD)*out*ry/rx:0;
+    _pieParts(it).forEach(([s,e])=>tramos.push({i,it,s,e,dx,dy,z:_pieDepth(s,e)}));
+  });
+  tramos.sort((a,b)=>a.z-b.z);
+  tramos.forEach(t=>{
+    const mov=(t.dx||t.dy)?` transform="translate(${t.dx.toFixed(1)} ${t.dy.toFixed(1)})"`:'';
+    cuerpo+=`<g class="slice3d" onclick="donutPick(${t.i})"${mov}>${_pieUnit(t.it,t.i,t.s,t.e)}</g>`;
+  });
+  lbls=_pieLabels();
+  return `<svg viewBox="0 0 200 ${(cyB+ry+14).toFixed(0)}">
+    <defs>${defs}
+      <filter id="pieSh" x="-45%" y="-120%" width="190%" height="380%"><feGaussianBlur stdDeviation="9"/></filter>
+      <filter id="pieSh2" x="-45%" y="-120%" width="190%" height="380%"><feGaussianBlur stdDeviation="4"/></filter></defs>
+    <ellipse cx="${cx}" cy="${cyB+11}" rx="${rx*1.02}" ry="${ry*.8}" fill="#000" opacity=".3" filter="url(#pieSh)"/>
+    <ellipse cx="${cx}" cy="${cyB+5}" rx="${rx*.88}" ry="${ry*.6}" fill="#000" opacity=".32" filter="url(#pieSh2)"/>
+    ${cuerpo}${lbls}
+  </svg>`;
+}
+
 function renderDonut(){
   const el=document.getElementById('donut');
   const title=document.getElementById('donutTitle');
@@ -484,36 +674,31 @@ function renderDonut(){
     const c=catById(cid);
     return {name:c?c.name:'Otro', color:c?c.color:'#64748b', val, pct:val/te*100};
   }).sort((a,b)=>b.val-a.val);
+  /* ALTURA = lo gastado (el que más gasta, el bloque más alto).
+     Va de hMin (la categoría menor) a hMax (la mayor), así nunca hay dos
+     categorías distintas con la misma altura ni bloques aplastados. */
+  const n=_pieItems.length, may=_pieItems[0]?_pieItems[0].pct:100;
+  _pieItems.forEach(it=>{ it.h=PIE.hMin+(PIE.hMax-PIE.hMin)*(may?it.pct/may:1); });
+  PIE.cyB=_pieItems[0].h+PIE.ry+12;        /* la base baja según lo alto que sea */
+  /* ANCHO = el mismo para todas. Colocación: la más pequeña justo delante y las
+     demás abriéndose a los lados por tamaño, así la mayor queda al fondo y
+     NINGÚN bloque tapa a otro. */
+  const anch=360/n;
+  const asc=[..._pieItems].sort((a,b)=>a.pct-b.pct);
+  const izq=[], der=[];
+  asc.forEach((it,k)=>{ if(k) (k%2?der:izq).push(it); });
+  const orden=[...izq].reverse().concat(asc[0]?[asc[0]]:[], der);
+  let ang=90-anch*izq.length-anch/2;
+  orden.forEach(it=>{ it.a0=ang; it.a1=ang+anch; it.mid=(it.a0+it.a1)/2; ang=it.a1; });
   _pieSel=-1;
-  const cx=100, cy=100, r=88;
-  let paths='', labels='';
-  if(_pieItems.length===1){
-    paths=`<circle class="slice" data-i="0" data-mx="0" data-my="0" onclick="donutPick(0)" cx="${cx}" cy="${cy}" r="${r}" fill="${_pieItems[0].color}"></circle>`;
-    labels=`<text class="plabel" x="${cx}" y="${cy+4}">100%</text>`;
-  }else{
-    let ang=-90;
-    _pieItems.forEach((it,i)=>{
-      const a0=ang, a1=ang+it.pct*3.6; ang=a1;
-      const rad=d=>d*Math.PI/180;
-      const x0=cx+r*Math.cos(rad(a0)), y0=cy+r*Math.sin(rad(a0));
-      const x1=cx+r*Math.cos(rad(a1)), y1=cy+r*Math.sin(rad(a1));
-      const large=(a1-a0)>180?1:0;
-      const mid=rad((a0+a1)/2);
-      paths+=`<path class="slice" data-i="${i}" data-mx="${Math.cos(mid).toFixed(3)}" data-my="${Math.sin(mid).toFixed(3)}" onclick="donutPick(${i})" d="M${cx} ${cy} L${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z" fill="${it.color}"></path>`;
-      if(it.pct>=7){
-        const lx=cx+r*0.62*Math.cos(mid), ly=cy+r*0.62*Math.sin(mid);
-        labels+=`<text class="plabel" x="${lx.toFixed(1)}" y="${(ly+4).toFixed(1)}">${it.pct.toFixed(0)}%</text>`;
-      }
-    });
-  }
   const legend=_pieItems.map((it,i)=>`<div class="lg" onclick="donutPick(${i})">
-    <span class="dot" style="background:${it.color};width:12px;height:12px"></span>
+    <span class="dot" style="background:${_pieTone(_pieBase(it.color),.02)};width:12px;height:12px"></span>
     <span class="ln">${esc(it.name)}</span>
     <span class="lp">${it.pct.toFixed(0)}%</span>
     <span class="lv">${money(it.val)}</span></div>`).join('');
   el.innerHTML=`<div class="pieCard">
     <div class="pieHead"><span class="ph1">Total gastos</span><span class="ph2">${money(te)}</span></div>
-    <div class="pieWrap"><svg viewBox="0 0 200 200">${paths}${labels}</svg></div>
+    <div class="pieWrap" id="pieWrap">${_pieSVG()}</div>
     <div class="pieDetail" id="pieDetail"><span class="pdHint">Toca un trozo del pastel para ver su detalle</span></div>
     <div class="legend">${legend}</div>
   </div>`;
@@ -603,22 +788,15 @@ function renderBars(){
 }
 
 function donutPick(i){
-  const det=document.getElementById('pieDetail'); if(!det) return;
-  const slices=document.querySelectorAll('#donut .slice');
-  if(_pieSel===i){
-    _pieSel=-1;
-    slices.forEach(s=>s.removeAttribute('transform'));
+  const det=document.getElementById('pieDetail'), wrap=document.getElementById('pieWrap');
+  if(!det||!wrap||!_pieItems[i]) return;
+  _pieSel = (_pieSel===i) ? -1 : i;
+  wrap.innerHTML=_pieSVG();
+  if(_pieSel<0){
     det.innerHTML='<span class="pdHint">Toca un trozo del pastel para ver su detalle</span>';
     return;
   }
-  const it=_pieItems[i]; if(!it) return;
-  _pieSel=i;
-  slices.forEach(s=>{
-    if(Number(s.dataset.i)===i){
-      const dx=(parseFloat(s.dataset.mx)||0)*9, dy=(parseFloat(s.dataset.my)||0)*9;
-      s.setAttribute('transform',`translate(${dx.toFixed(1)} ${dy.toFixed(1)})`);
-    }else s.removeAttribute('transform');
-  });
+  const it=_pieItems[_pieSel];
   det.innerHTML=`<span class="pd"><span class="dot" style="background:${it.color};width:11px;height:11px"></span>${esc(it.name)}: ${money(it.val)} · ${it.pct.toFixed(0)}%</span>`;
 }
 
