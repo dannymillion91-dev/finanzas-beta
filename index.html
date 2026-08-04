@@ -161,7 +161,8 @@
   .fab-note{font-size:11px;color:var(--muted);text-align:center;margin-top:10px}
 
   /* Gráfico circular (pastel) */
-  .pieCard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 14px;margin-bottom:6px}
+  /* casi negro a propósito: el neón sólo se ve neón sobre fondo oscuro */
+  .pieCard{background:#070c16;border:1px solid var(--line);border-radius:var(--radius);padding:16px 14px;margin-bottom:6px}
   .pieHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
   .pieHead .ph1{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
   .pieHead .ph2{font-size:17px;font-weight:700}
@@ -525,7 +526,9 @@ function _pieHex(h,s,l){
    elegido. Se multiplica (no se suma) para que un gris siga siendo gris. */
 function _pieBase(hex){
   const [h,s,l]=_pieHSL(hex);
-  return [h, Math.min(.98,s*1.55), Math.min(.66,Math.max(.52,l))];  /* neón: color al máximo y luz alta */
+  /* neón: color al máximo. La luz se corta en .60 porque los colores claros
+     (amarillo, naranja, celeste) se iban a pastel al aclararles la tapa. */
+  return [h, Math.min(.98,s*1.55), Math.min(.6,Math.max(.5,l))];
 }
 /* dl = cuánta luz sube (+) o baja (-). Al oscurecer subo algo la saturación
    para que las sombras tengan color y no se vean sucias. */
@@ -630,9 +633,9 @@ function _pieSVG(){
     const t=cyB-it.h, b=_pieBase(it.color);
     /* mismo recorrido de luz que las barras: encendido arriba, hondo abajo */
     defs+=`<linearGradient id="pgT${i}" gradientUnits="userSpaceOnUse" x1="${cx-rx}" y1="${t-ry}" x2="${cx+rx*.7}" y2="${t+ry}">`+
-          `<stop offset="0" stop-color="${_pieTone(b,.15)}"/>`+
-          `<stop offset=".55" stop-color="${_pieTone(b,.05)}"/>`+
-          `<stop offset="1" stop-color="${_pieTone(b,-.02)}"/></linearGradient>`+
+          `<stop offset="0" stop-color="${_pieTone(b,.09)}"/>`+
+          `<stop offset=".55" stop-color="${_pieTone(b,.02)}"/>`+
+          `<stop offset="1" stop-color="${_pieTone(b,-.04)}"/></linearGradient>`+
           `<linearGradient id="pgW${i}" gradientUnits="userSpaceOnUse" x1="0" y1="${t-ry}" x2="0" y2="${cyB+ry}">`+
           `<stop offset="0" stop-color="${_pieTone(b,.04)}"/>`+
           `<stop offset=".18" stop-color="${_pieTone(b,.11)}"/>`+
@@ -655,8 +658,8 @@ function _pieSVG(){
         `<stop offset=".42" stop-color="#fff" stop-opacity="0"/>`+
         `<stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`+
         `<linearGradient id="pieGloss" gradientUnits="userSpaceOnUse" x1="${cx-rx}" y1="0" x2="${cx+rx*.5}" y2="${cyB}">`+
-        `<stop offset="0" stop-color="#fff" stop-opacity=".13"/>`+
-        `<stop offset=".5" stop-color="#fff" stop-opacity=".02"/>`+
+        `<stop offset="0" stop-color="#fff" stop-opacity=".06"/>`+
+        `<stop offset=".45" stop-color="#fff" stop-opacity=".01"/>`+
         `<stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
   /* Todos los tramos (incluido el separado) ordenados del fondo hacia delante.
      El bloque elegido se aparta hacia fuera pero se pinta en su profundidad:
@@ -678,7 +681,9 @@ function _pieSVG(){
       (_pieVer(t.s,t.e)?`<path d="${_pieWallP(t.it,t.s,t.e)}" fill="${luz}"/>`:'')+
       `<path d="${_pieTopP(t.it,t.s,t.e)}" fill="${luz}"/></g>`;
   });
-  cuerpo=`<g filter="url(#pieNeon)" opacity=".55">${halo}</g>`+cuerpo;
+  /* mix-blend-mode:screen = la luz SUMA como la de verdad, así el halo mantiene
+     su color en vez de volverse un manchón blanco al solaparse con los vecinos */
+  cuerpo=`<g filter="url(#pieNeon)" opacity=".8" style="mix-blend-mode:screen">${halo}</g>`+cuerpo;
   lbls=_pieLabels();
   return `<svg viewBox="0 0 200 ${(cyB+ry+14).toFixed(0)}">
     <defs>${defs}
