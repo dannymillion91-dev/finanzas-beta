@@ -189,22 +189,28 @@
   .bTabs{display:flex;gap:6px;margin-bottom:14px}
   .bTab{flex:1;padding:8px 4px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.3px}
   .bTab.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
-  .bCols.many{gap:8px}
-  .bLbls.many{gap:8px}
-  .bChart{position:relative;height:140px;margin-top:4px}
-  .bGrid{position:absolute;left:44px;right:0;height:0;border-top:1px dashed rgba(147,161,189,.22)}
-  .bGrid span{position:absolute;left:-44px;top:-7px;width:38px;text-align:right;font-size:10px;color:var(--muted);font-weight:600}
-  .bAvg{position:absolute;left:44px;right:0;height:0;border-top:2px dashed var(--amber);opacity:.75;z-index:2}
-  .bAvg span{position:absolute;right:0;top:-16px;font-size:10px;color:var(--amber);font-weight:700;background:var(--panel);padding:1px 5px;border-radius:5px}
-  .bCols{position:absolute;top:0;bottom:0;left:44px;right:0;display:flex;align-items:flex-end;gap:14px;padding:0 6px;z-index:1}
-  .bcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:5px}
-  .bval{font-size:10px;color:var(--muted);font-weight:700;white-space:nowrap}
-  .bfill{width:72%;max-width:46px;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,#3d4d6d,#2a3852);min-height:2px;transition:height .3s}
-  .bcol.now .bfill{background:linear-gradient(180deg,var(--accent),var(--accent2));box-shadow:0 0 16px rgba(20,184,166,.30)}
-  .bcol.now .bval{color:var(--accent)}
-  .bLbls{display:flex;gap:14px;padding:7px 6px 0 44px}
-  .bLbls span{flex:1;text-align:center;font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap}
-  .bLbls span.now{color:var(--accent);font-weight:700}
+  .barsWrap{margin-top:4px}
+  .barsSvg{width:100%;display:block;overflow:visible}
+  .bBar{transition:d .3s}
+  .bHit{fill:transparent;cursor:pointer}
+  .bSel{fill:rgba(255,255,255,.05)}
+  .bgLine{stroke:rgba(147,161,189,.18);stroke-width:1;stroke-dasharray:3 3}
+  .bgTxt{font-size:10px;fill:var(--muted);font-weight:600}
+  .bAvgLine{stroke:rgba(147,161,189,.5);stroke-width:1.4;stroke-dasharray:5 4}
+  .bAvgTxt{font-size:9.5px;fill:var(--muted);font-weight:700}
+  .bVal{font-size:9px;font-weight:700;text-anchor:middle}
+  .bVal.ing{fill:#7df0a9}
+  .bVal.gas{fill:#8fe0ff}
+  .bLbl{font-size:10.5px;fill:var(--muted);font-weight:600;text-anchor:middle}
+  .bLbl.now{fill:var(--txt);font-weight:700}
+  .bLeg{display:flex;justify-content:center;gap:18px;margin-top:8px;font-size:12px;color:var(--muted);font-weight:600}
+  .bLeg span{display:flex;align-items:center;gap:6px}
+  .bLeg i{width:9px;height:9px;border-radius:50%}
+  .bDet{display:flex;align-items:center;justify-content:center;min-height:32px;margin-top:8px}
+  .bDet .bdHint{font-size:12px;color:var(--muted)}
+  .bDet .bd{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:6px 14px;display:flex;gap:10px;align-items:center;font-size:13px;font-weight:600}
+  .bDet .bd .i{color:#4ef58e}
+  .bDet .bd .g{color:#63dcff}
   .barsMsg{text-align:center;font-size:13px;color:var(--muted);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
   .barsMsg b{color:var(--txt)}
 </style>
@@ -235,7 +241,7 @@
     <div class="section-title" id="donutTitle" style="display:none">¿A dónde va tu dinero?</div>
     <div id="donut"></div>
 
-    <div class="section-title" id="barsTitle" style="display:none">Tendencia de gasto</div>
+    <div class="section-title" id="barsTitle" style="display:none">Ingresos y gastos</div>
     <div id="bars"></div>
 
     <div class="section-title">Mis cuentas</div>
@@ -477,6 +483,11 @@ function renderCategories(){
 
 let _pieItems=[], _pieSel=-1;
 /* Geometría del pastel 3D: elipse (rx/ry) + altura escalonada (hMin..hMax) */
+/* Paleta neón del circular, en el mismo idioma que las barras (el 1º es el verde
+   de "ingresos" y el 2º el cian de "gastos"). Cada categoría coge un color fijo
+   según su posición en la lista de categorías, así no cambia de color de un mes
+   a otro. Esto MANDA sobre el color que se elige al crear la categoría. */
+const PIE_PAL=['#4ef58e','#63dcff','#b06bff','#ff5fa2','#ffd23f','#ff8a3d','#4d7cff','#7cf5d0','#f45b5b','#a5f54e'];
 /* Todos los bloques miden lo mismo de ancho; lo que cambia es la ALTURA,
    proporcional a lo gastado (hMin = suelo para que los pequeños se vean). */
 const PIE={cx:100, cyB:150, rx:80, ry:38, hMin:26, hMax:128, out:12};
@@ -514,7 +525,7 @@ function _pieHex(h,s,l){
    elegido. Se multiplica (no se suma) para que un gris siga siendo gris. */
 function _pieBase(hex){
   const [h,s,l]=_pieHSL(hex);
-  return [h, Math.min(.95,s*1.3), Math.min(.6,Math.max(.45,l))];
+  return [h, Math.min(.98,s*1.55), Math.min(.66,Math.max(.52,l))];  /* neón: color al máximo y luz alta */
 }
 /* dl = cuánta luz sube (+) o baja (-). Al oscurecer subo algo la saturación
    para que las sombras tengan color y no se vean sucias. */
@@ -547,20 +558,29 @@ function _pieFront(it){
   const ps=_pieParts(it).filter(([s,e])=>_pieVer(s,e));
   return ps.length?[ps[0][0], ps[ps.length-1][1]]:null;
 }
+/* formas de un tramo, para poder pintarlas dos veces: una borrosa detrás
+   (el halo de neón) y otra sólida delante */
+function _pieWallP(it,s,e){
+  const t=PIE.cyB-it.h;
+  return `M${_pp(s,t)} A${PIE.rx} ${PIE.ry} 0 0 1 ${_pp(e,t)} L${_pp(e,PIE.cyB)} A${PIE.rx} ${PIE.ry} 0 0 0 ${_pp(s,PIE.cyB)} Z`;
+}
+function _pieTopP(it,s,e){
+  const t=PIE.cyB-it.h;
+  return `M${PIE.cx} ${t} L${_pp(s,t)} A${PIE.rx} ${PIE.ry} 0 0 1 ${_pp(e,t)} Z`;
+}
 /* un tramo: caras del corte + pared exterior (sólo la parte delantera) + tapa */
 function _pieUnit(it,i,s,e){
-  const t=PIE.cyB-it.h;
   let o='';
   /* el borde va pintado igual que el relleno: así no queda raya entre tramos,
      y con stroke-linejoin:round redondea las esquinas de cada bloque */
   if(Math.abs(s-it.a0)<.2 && Math.cos(it.a0*RAD)<0) o+=`<path d="${_pieCut(it,it.a0)}" fill="url(#pgA${i})" stroke="url(#pgA${i})"/>`;
   if(Math.abs(e-it.a1)<.2 && Math.cos(it.a1*RAD)>0) o+=`<path d="${_pieCut(it,it.a1)}" fill="url(#pgB${i})" stroke="url(#pgB${i})"/>`;
   if(_pieVer(s,e)){
-    const w=`M${_pp(s,t)} A${PIE.rx} ${PIE.ry} 0 0 1 ${_pp(e,t)} L${_pp(e,PIE.cyB)} A${PIE.rx} ${PIE.ry} 0 0 0 ${_pp(s,PIE.cyB)} Z`;
+    const w=_pieWallP(it,s,e);
     o+=`<path d="${w}" fill="url(#pgW${i})" stroke="url(#pgW${i})"/>`+
        `<path d="${w}" fill="url(#pieSpec)" stroke="url(#pieSpec)"/>`;   /* brillo del cilindro */
   }
-  const tp=`M${PIE.cx} ${t} L${_pp(s,t)} A${PIE.rx} ${PIE.ry} 0 0 1 ${_pp(e,t)} Z`;
+  const tp=_pieTopP(it,s,e);
   o+=`<path d="${tp}" fill="url(#pgT${i})" stroke="url(#pgT${i})"/>`+
      `<path d="${tp}" fill="url(#pieGloss)" stroke="url(#pieGloss)"/>`;  /* luz sobre la tapa */
   return o;
@@ -608,24 +628,25 @@ function _pieSVG(){
      (si no, cada tramo tendría el suyo y se verían costuras) */
   _pieItems.forEach((it,i)=>{
     const t=cyB-it.h, b=_pieBase(it.color);
+    /* mismo recorrido de luz que las barras: encendido arriba, hondo abajo */
     defs+=`<linearGradient id="pgT${i}" gradientUnits="userSpaceOnUse" x1="${cx-rx}" y1="${t-ry}" x2="${cx+rx*.7}" y2="${t+ry}">`+
-          `<stop offset="0" stop-color="${_pieTone(b,.16)}"/>`+
-          `<stop offset=".55" stop-color="${_pieTone(b,.03)}"/>`+
-          `<stop offset="1" stop-color="${_pieTone(b,-.04)}"/></linearGradient>`+
+          `<stop offset="0" stop-color="${_pieTone(b,.15)}"/>`+
+          `<stop offset=".55" stop-color="${_pieTone(b,.05)}"/>`+
+          `<stop offset="1" stop-color="${_pieTone(b,-.02)}"/></linearGradient>`+
           `<linearGradient id="pgW${i}" gradientUnits="userSpaceOnUse" x1="0" y1="${t-ry}" x2="0" y2="${cyB+ry}">`+
-          `<stop offset="0" stop-color="${_pieTone(b,.03)}"/>`+
-          `<stop offset=".18" stop-color="${_pieTone(b,.12)}"/>`+
-          `<stop offset=".55" stop-color="${_pieTone(b,-.11)}"/>`+
-          `<stop offset=".88" stop-color="${_pieTone(b,-.27)}"/>`+
-          `<stop offset="1" stop-color="${_pieTone(b,-.17)}"/></linearGradient>`+  /* rebote de luz abajo */
+          `<stop offset="0" stop-color="${_pieTone(b,.04)}"/>`+
+          `<stop offset=".18" stop-color="${_pieTone(b,.11)}"/>`+
+          `<stop offset=".6" stop-color="${_pieTone(b,-.09)}"/>`+
+          `<stop offset=".9" stop-color="${_pieTone(b,-.19)}"/>`+
+          `<stop offset="1" stop-color="${_pieTone(b,-.12)}"/></linearGradient>`+  /* rebote de luz abajo */
           `<linearGradient id="pgA${i}" gradientUnits="userSpaceOnUse" x1="0" y1="${t-ry}" x2="0" y2="${cyB+ry}">`+
-          `<stop offset="0" stop-color="${_pieTone(b,-.12)}"/>`+
-          `<stop offset=".7" stop-color="${_pieTone(b,-.25)}"/>`+
-          `<stop offset="1" stop-color="${_pieTone(b,-.18)}"/></linearGradient>`+
+          `<stop offset="0" stop-color="${_pieTone(b,-.1)}"/>`+
+          `<stop offset=".7" stop-color="${_pieTone(b,-.2)}"/>`+
+          `<stop offset="1" stop-color="${_pieTone(b,-.14)}"/></linearGradient>`+
           `<linearGradient id="pgB${i}" gradientUnits="userSpaceOnUse" x1="0" y1="${t-ry}" x2="0" y2="${cyB+ry}">`+
-          `<stop offset="0" stop-color="${_pieTone(b,-.05)}"/>`+
-          `<stop offset=".7" stop-color="${_pieTone(b,-.18)}"/>`+
-          `<stop offset="1" stop-color="${_pieTone(b,-.1)}"/></linearGradient>`;
+          `<stop offset="0" stop-color="${_pieTone(b,-.03)}"/>`+
+          `<stop offset=".7" stop-color="${_pieTone(b,-.14)}"/>`+
+          `<stop offset="1" stop-color="${_pieTone(b,-.07)}"/></linearGradient>`;
   });
   /* brillo especular del cilindro y luz suave sobre las tapas (una sola luz para todo) */
   defs+=`<linearGradient id="pieSpec" gradientUnits="userSpaceOnUse" x1="${cx-rx}" y1="0" x2="${cx+rx}" y2="0">`+
@@ -647,15 +668,23 @@ function _pieSVG(){
     _pieParts(it).forEach(([s,e])=>tramos.push({i,it,s,e,dx,dy,z:_pieDepth(s,e)}));
   });
   tramos.sort((a,b)=>a.z-b.z);
+  let halo='';
   tramos.forEach(t=>{
     const mov=(t.dx||t.dy)?` transform="translate(${t.dx.toFixed(1)} ${t.dy.toFixed(1)})"`:'';
     cuerpo+=`<g class="slice3d" onclick="donutPick(${t.i})"${mov}>${_pieUnit(t.it,t.i,t.s,t.e)}</g>`;
+    /* misma forma en color encendido, detrás y borrosa: eso es el neón */
+    const luz=_pieTone(_pieBase(t.it.color),.12);
+    halo+=`<g${mov}>`+
+      (_pieVer(t.s,t.e)?`<path d="${_pieWallP(t.it,t.s,t.e)}" fill="${luz}"/>`:'')+
+      `<path d="${_pieTopP(t.it,t.s,t.e)}" fill="${luz}"/></g>`;
   });
+  cuerpo=`<g filter="url(#pieNeon)" opacity=".55">${halo}</g>`+cuerpo;
   lbls=_pieLabels();
   return `<svg viewBox="0 0 200 ${(cyB+ry+14).toFixed(0)}">
     <defs>${defs}
       <filter id="pieSh" x="-45%" y="-120%" width="190%" height="380%"><feGaussianBlur stdDeviation="9"/></filter>
-      <filter id="pieSh2" x="-45%" y="-120%" width="190%" height="380%"><feGaussianBlur stdDeviation="4"/></filter></defs>
+      <filter id="pieSh2" x="-45%" y="-120%" width="190%" height="380%"><feGaussianBlur stdDeviation="4"/></filter>
+      <filter id="pieNeon" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter></defs>
     <ellipse cx="${cx}" cy="${cyB+11}" rx="${rx*1.02}" ry="${ry*.8}" fill="#000" opacity=".3" filter="url(#pieSh)"/>
     <ellipse cx="${cx}" cy="${cyB+5}" rx="${rx*.88}" ry="${ry*.6}" fill="#000" opacity=".32" filter="url(#pieSh2)"/>
     ${cuerpo}${lbls}
@@ -670,9 +699,12 @@ function renderDonut(){
   if(title) title.style.display='';
   const totals={};
   state.expenses.forEach(e=>{ totals[e.categoryId]=(totals[e.categoryId]||0)+Number(e.amount); });
+  /* color neón fijo por categoría, según su puesto en la lista de categorías */
+  const puesto={};
+  state.categories.forEach((c,k)=>{ puesto[c.id]=k; });
   _pieItems=Object.entries(totals).map(([cid,val])=>{
-    const c=catById(cid);
-    return {name:c?c.name:'Otro', color:c?c.color:'#64748b', val, pct:val/te*100};
+    const c=catById(cid), k=(cid in puesto)?puesto[cid]:0;
+    return {name:c?c.name:'Otro', color:PIE_PAL[k%PIE_PAL.length], val, pct:val/te*100};
   }).sort((a,b)=>b.val-a.val);
   /* ALTURA = lo gastado (el que más gasta, el bloque más alto).
      Va de hMin (la categoría menor) a hMax (la mayor), así nunca hay dos
@@ -703,12 +735,12 @@ function renderDonut(){
     <div class="legend">${legend}</div>
   </div>`;
 }
-let _barsMode=localStorage.getItem('misFinanzas_barsMode')||'sem';
-function setBarsMode(m){ _barsMode=m; localStorage.setItem('misFinanzas_barsMode',m); renderBars(); }
+let _barsMode=localStorage.getItem('misFinanzas_barsMode')||'sem', _barsSel=-1;
+function setBarsMode(m){ _barsMode=m; _barsSel=-1; localStorage.setItem('misFinanzas_barsMode',m); renderBars(); }
 function renderBars(){
   const el=document.getElementById('bars');
   const title=document.getElementById('barsTitle');
-  if(!state.expenses.length){ el.innerHTML=''; if(title) title.style.display='none'; return; }
+  if(!state.expenses.length && !state.incomes.length){ el.innerHTML=''; if(title) title.style.display='none'; return; }
   if(title) title.style.display='';
   const isoL=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   const hoy=new Date(); hoy.setHours(0,0,0,0);
@@ -739,30 +771,24 @@ function renderBars(){
   }
   periodos.forEach(pd=>{
     const a=isoL(pd.ini), b=isoL(pd.fin);
-    pd.total=state.expenses.reduce((s,e)=>(e.date>=a&&e.date<b)?s+Number(e.amount):s,0);
+    pd.gas=state.expenses.reduce((s,e)=>(e.date>=a&&e.date<b)?s+Number(e.amount):s,0);
+    pd.ing=state.incomes.reduce((s,e)=>(e.date>=a&&e.date<b)?s+Number(e.amount):s,0);
+    pd.total=pd.gas;
   });
   const NOMBRE={dia:'Hoy',sem:'Esta semana',mes:'Este mes'};
   const UNIDAD={dia:'diario',sem:'semanal',mes:'mensual'};
-  const BASE={dia:'Tu gasto de los últimos 7 días.',sem:'Tu gasto semanal de las últimas 4 semanas.',mes:'Tu gasto mensual de los últimos 6 meses.'};
-  // techo "bonito" para la escala (100, 150, 200, 250...)
-  const maxVal=Math.max(...periodos.map(s=>s.total),1);
+  const BASE={dia:'Tus ingresos y gastos de los últimos 7 días.',sem:'Tus ingresos y gastos de las últimas 4 semanas.',mes:'Tus ingresos y gastos de los últimos 6 meses.'};
+  // techo "bonito" para la escala, mirando ingresos Y gastos (100, 150, 200...)
+  const maxVal=Math.max(...periodos.map(s=>Math.max(s.gas,s.ing)),1);
   const p=Math.pow(10,Math.floor(Math.log10(maxVal)));
   let top=10*p;
   for(const m of [1,1.5,2,2.5,3,4,5,6,8,10]){ if(m*p>=maxVal){ top=m*p; break; } }
   const eur0=n=>CUR+Math.round(n).toLocaleString('es-ES');
-  const many=periodos.length>4?' many':'';
-  const cols=periodos.map(s=>`<div class="bcol ${s.now?'now':''}">
-    <div class="bval">${s.total>0?eur0(s.total):'—'}</div>
-    <div class="bfill" style="height:${Math.max(2,Math.min(96,s.total/top*100)).toFixed(1)}%"></div>
-  </div>`).join('');
-  const lbls=periodos.map(s=>`<span class="${s.now?'now':''}">${s.now&&_barsMode==='sem'?'Esta semana':s.lbl}</span>`).join('');
   // línea de promedio + mensaje comparativo (periodos anteriores con datos)
   const previas=periodos.slice(0,-1).filter(s=>s.total>0);
-  let msg=BASE[_barsMode];
-  let avgLine='';
+  let msg=BASE[_barsMode], prom=0;
   if(previas.length){
-    const prom=previas.reduce((s,x)=>s+x.total,0)/previas.length;
-    avgLine=`<div class="bAvg" style="bottom:${Math.min(96,prom/top*100).toFixed(1)}%"><span>promedio ${eur0(prom)}</span></div>`;
+    prom=previas.reduce((s,x)=>s+x.total,0)/previas.length;
     const actual=periodos[periodos.length-1].total;
     if(prom>0){
       const dif=Math.round((actual-prom)/prom*100);
@@ -773,19 +799,78 @@ function renderBars(){
     }
   }
   const tab=(m,txt)=>`<button class="bTab ${_barsMode===m?'active':''}" onclick="setBarsMode('${m}')">${txt}</button>`;
+  const sel=periodos[_barsSel];
+  const chip=sel
+    ? `<span class="bd"><b>${esc(sel.now&&_barsMode==='sem'?'Esta semana':sel.lbl)}</b>
+        <span class="i">↑ ${money(sel.ing)}</span><span class="g">↓ ${money(sel.gas)}</span></span>`
+    : `<span class="bdHint">Toca un periodo para ver sus números</span>`;
   el.innerHTML=`<div class="barsCard">
     <div class="bTabs">${tab('dia','Días')}${tab('sem','Semanas')}${tab('mes','Meses')}</div>
-    <div class="bChart">
-      <div class="bGrid" style="top:0"><span>${eur0(top)}</span></div>
-      <div class="bGrid" style="top:50%"><span>${eur0(top/2)}</span></div>
-      <div class="bGrid" style="bottom:0"><span>${CUR}0</span></div>
-      ${avgLine}
-      <div class="bCols${many}">${cols}</div>
-    </div>
-    <div class="bLbls${many}">${lbls}</div>
+    ${_barsSVG(periodos,top,prom,eur0)}
+    <div class="bDet">${chip}</div>
     <div class="barsMsg">${msg}</div>
   </div>`;
 }
+
+/* Dos barras por periodo: ingresos (verde) y gastos (azul), planas con
+   degradado propio, esquinas redondeadas y un halo de luz de su color. */
+const BAR={w:320, top:30, base:146, x0:44, x1:312, lblY:162, h:176};
+const BCOL={ing:['#4ef58e','#0a9f57'], gas:['#63dcff','#1568d6']};
+function _barsSVG(periodos,tope,prom,eur0){
+  const {w,top,base,x0,x1,lblY}=BAR;
+  const n=periodos.length, slot=(x1-x0)/n;
+  const bw=Math.min(20,(slot-10-4)/2), alto=base-top;
+  const yDe=v=>base-Math.max(0,Math.min(1,v/tope))*alto;
+  const verVal=bw>=14;           /* si no caben los números, se ven tocando */
+  let rejilla='', fondo='', bIng='', bGas='', vals='', lbls='';
+  [[tope,top],[tope/2,(top+base)/2],[0,base]].forEach(([v,y])=>{
+    rejilla+=`<line class="bgLine" x1="${x0-4}" y1="${y}" x2="${x1}" y2="${y}"/>`+
+             `<text class="bgTxt" x="${x0-8}" y="${y+3.5}" text-anchor="end">${v?eur0(v):CUR+'0'}</text>`;
+  });
+  periodos.forEach((s,i)=>{
+    const xs=x0+slot*i, par=2*bw+4, x=xs+(slot-par)/2;
+    if(i===_barsSel) fondo+=`<rect class="bSel" x="${xs+2}" y="${top-14}" width="${slot-4}" height="${base-top+30}" rx="10"/>`;
+    fondo+=`<rect class="bHit" x="${xs}" y="${top-16}" width="${slot}" height="${base-top+34}" onclick="barsPick(${i})"/>`;
+    [['ing',s.ing,x],['gas',s.gas,x+bw+4]].forEach(([k,v,bx])=>{
+      if(v<=0) return;
+      const y=yDe(v), h=Math.max(3,base-y), r=Math.min(5,bw/2.2);
+      const b=`<rect class="bBar" x="${bx.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${r.toFixed(1)}" fill="url(#bg_${k})"/>`;
+      if(k==='ing') bIng+=b; else bGas+=b;
+      if(verVal) vals+=`<text class="bVal ${k}" x="${(bx+bw/2).toFixed(1)}" y="${(y-6).toFixed(1)}">${eur0(v)}</text>`;
+    });
+    lbls+=`<text class="bLbl${s.now?' now':''}" x="${(xs+slot/2).toFixed(1)}" y="${lblY}">${esc(s.now&&_barsMode==='sem'?'Esta semana':s.lbl)}</text>`;
+  });
+  let media='';
+  if(prom>0){
+    const y=yDe(prom);
+    /* el texto busca hueco: encima de la línea, debajo, o arriba del todo,
+       para no pisar nunca el número de una barra */
+    const cerca=[];
+    periodos.forEach((s,i)=>{
+      const xs=x0+slot*i, par=2*bw+4, x=xs+(slot-par)/2;
+      [[s.ing,x],[s.gas,x+bw+4]].forEach(([v,bx])=>{
+        if(v>0 && bx+bw/2 > x1-105) cerca.push(yDe(v)-6);
+      });
+    });
+    const libre=c=>!cerca.some(v=>Math.abs(v-c)<12);
+    const cand=[y-5,y+13,BAR.top-20].find(libre);
+    media=`<line class="bAvgLine" x1="${x0-4}" y1="${y}" x2="${x1}" y2="${y}"/>`+
+          `<text class="bAvgTxt" x="${x1}" y="${(cand!==undefined?cand:BAR.top-20).toFixed(1)}" text-anchor="end">prom. gastos ${eur0(prom)}</text>`;
+  }
+  const deg=(id,c)=>`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">`+
+    `<stop offset="0" stop-color="${c[0]}"/><stop offset="1" stop-color="${c[1]}"/></linearGradient>`;
+  const halo=(id,c)=>`<filter id="${id}" x="-25%" y="-25%" width="150%" height="150%">`+
+    `<feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="${c}" flood-opacity=".55"/></filter>`;
+  return `<div class="barsWrap"><svg viewBox="0 0 ${w} ${BAR.h}" class="barsSvg">
+    <defs>${deg('bg_ing',BCOL.ing)}${deg('bg_gas',BCOL.gas)}
+      ${halo('hIng',BCOL.ing[0])}${halo('hGas',BCOL.gas[0])}</defs>
+    ${rejilla}${fondo}
+    <g filter="url(#hIng)">${bIng}</g><g filter="url(#hGas)">${bGas}</g>
+    ${media}${vals}${lbls}
+  </svg></div>
+  <div class="bLeg"><span><i style="background:${BCOL.ing[0]}"></i>Ingresos</span><span><i style="background:${BCOL.gas[0]}"></i>Gastos</span></div>`;
+}
+function barsPick(i){ _barsSel = (_barsSel===i) ? -1 : i; renderBars(); }
 
 function donutPick(i){
   const det=document.getElementById('pieDetail'), wrap=document.getElementById('pieWrap');
