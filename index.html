@@ -42,6 +42,10 @@
     background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
     padding:14px 12px;
   }
+  /* .tap = la tarjeta lleva a su lista al tocarla */
+  .card.tap{cursor:pointer;position:relative}
+  .card.tap:active{background:var(--panel2);transform:scale(.98)}
+  .card.tap .lbl:after{content:'›';margin-left:5px;font-size:14px;line-height:0;opacity:.65}
   .card .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
   .card .val{font-size:19px;font-weight:700;margin-top:6px}
   .card.income .val{color:var(--green)}
@@ -236,8 +240,8 @@
   <!-- INICIO / RESUMEN -->
   <div class="view active" id="view-resumen">
     <div class="summary">
-      <div class="card income"><div class="lbl">Ingresos</div><div class="val" id="sumIn">€0</div></div>
-      <div class="card expense"><div class="lbl">Gastos</div><div class="val" id="sumEx">€0</div></div>
+      <div class="card income tap" onclick="showView('ingresos')"><div class="lbl">Ingresos</div><div class="val" id="sumIn">€0</div></div>
+      <div class="card expense tap" onclick="showView('gastos')"><div class="lbl">Gastos</div><div class="val" id="sumEx">€0</div></div>
       <div class="card net"><div class="lbl">Disponible</div><div class="val" id="sumNet">€0</div></div>
     </div>
 
