@@ -12,6 +12,9 @@
     --txt:#e8eefb; --muted:#93a1bd; --accent:#14b8a6; --accent2:#0f766e;
     --green:#22c55e; --red:#f43f5e; --amber:#f59e0b; --blue:#3b82f6;
     --radius:14px;
+    /* curvas de movimiento (las de serie del navegador son demasiado flojas) */
+    --ease-out:cubic-bezier(0.23,1,0.32,1);
+    --ease-in-out:cubic-bezier(0.77,0,0.175,1);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
@@ -66,7 +69,9 @@
   .tab.active{color:var(--accent)}
 
   .view{display:none}
-  .view.active{display:block}
+  /* cambio de pestaña: se ve decenas de veces al día, así que rápido y sutil */
+  .view.active{display:block;animation:viewIn .18s var(--ease-out) both}
+  @keyframes viewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
   .section-title{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:20px 0 10px}
   .section-title:first-child{margin-top:0}
@@ -174,6 +179,8 @@
   .pieWrap{width:100%;max-width:440px;margin:0 auto}
   .pieWrap svg{width:100%;display:block;overflow:visible}
   .slice3d{cursor:pointer}
+  /* el bloque se aparta y vuelve deslizándose (sólo transform: va por GPU) */
+  #pieWrap g[data-i]{transition:transform .24s var(--ease-out)}
   .slice3d path{stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round;shape-rendering:geometricPrecision}
   .slice3d path.filo{stroke-width:1.4;opacity:.9}
   .plabel{font-size:13px;font-weight:800;fill:#fff;pointer-events:none;text-anchor:middle;paint-order:stroke;stroke:rgba(0,0,0,.5);stroke-width:2.6px}
@@ -198,7 +205,9 @@
   .bTab.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
   .barsWrap{margin-top:4px}
   .barsSvg{width:100%;display:block;overflow:visible}
-  .bBar{transition:d .3s}
+  .bBar{transform-box:fill-box;transform-origin:bottom}
+  .bBar.up{animation:barUp .28s var(--ease-out) both}
+  @keyframes barUp{from{transform:scaleY(.03);opacity:0}to{transform:scaleY(1);opacity:1}}
   .bHit{fill:transparent;cursor:pointer}
   .bSel{fill:rgba(255,255,255,.05)}
   .bgLine{stroke:rgba(147,161,189,.18);stroke-width:1;stroke-dasharray:3 3}
@@ -220,6 +229,17 @@
   .bDet .bd .g{color:#63dcff}
   .barsMsg{text-align:center;font-size:13px;color:var(--muted);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
   .barsMsg b{color:var(--txt)}
+
+  /* Si el móvil tiene activado "reducir movimiento" (por mareos o vértigo):
+     se quitan los desplazamientos, pero NO todo. Las cosas siguen apareciendo
+     y apagándose con suavidad, que ayuda a entender qué ha cambiado. */
+  @media (prefers-reduced-motion: reduce){
+    .view.active{animation:viewFade .15s ease both}
+    @keyframes viewFade{from{opacity:0}to{opacity:1}}
+    .bBar.up{animation:viewFade .2s ease both}
+    #pieWrap g[data-i]{transition:none}
+    .card.tap:active{transform:none}
+  }
 </style>
 </head>
 <body>
@@ -605,25 +625,27 @@ function _pieUnit(it,i,s,e){
 /* % grande en la pared del bloque (como la imagen de referencia);
    si el bloque no enseña pared o es muy estrecho, va fuera con una rayita */
 function _pieLabels(){
-  let dentro='', fuera=[];
+  /* Se dibujan SIN tener en cuenta qué trozo está separado: cada etiqueta va
+     en un grupo con el número de su trozo, y al tocarlo se mueve el grupo.
+     Así el movimiento lo hace el navegador y no hay que redibujar nada. */
+  const porTrozo={}, fuera=[];
+  const add=(i,html)=>{ porTrozo[i]=(porTrozo[i]||'')+html; };
   _pieItems.forEach((it,i)=>{
-    const sel=(i===_pieSel);
-    const dx=sel?Math.cos(it.mid*RAD)*PIE.out:0, dy=sel?Math.sin(it.mid*RAD)*PIE.out*PIE.ry/PIE.rx:0;
     const t=PIE.cyB-it.h, c=Math.cos(it.mid*RAD), s=Math.sin(it.mid*RAD);
     const fr=_pieFront(it);
     if(fr && fr[1]-fr[0]>=22){
       /* enseña pared: el % va escrito en la pared, en grande */
       const am=(fr[0]+fr[1])/2;
-      const x=PIE.cx+PIE.rx*Math.cos(am*RAD)+dx;
-      const y=(t+PIE.cyB)/2+PIE.ry*Math.sin(am*RAD)+dy+5;
-      dentro+=`<text class="plabel big" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${it.pct.toFixed(0)}%</text>`;
+      const x=PIE.cx+PIE.rx*Math.cos(am*RAD);
+      const y=(t+PIE.cyB)/2+PIE.ry*Math.sin(am*RAD)+5;
+      add(i,`<text class="plabel big" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${it.pct.toFixed(0)}%</text>`);
     }else if(it.a1-it.a0>=25){
-      const x=PIE.cx+PIE.rx*.58*c+dx, y=t+PIE.ry*.58*s+dy+4;
-      dentro+=`<text class="plabel" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${it.pct.toFixed(0)}%</text>`;
+      const x=PIE.cx+PIE.rx*.58*c, y=t+PIE.ry*.58*s+4;
+      add(i,`<text class="plabel" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${it.pct.toFixed(0)}%</text>`);
     }else{
-      fuera.push({pct:it.pct,
-        x1:PIE.cx+PIE.rx*.95*c+dx, y1:t+PIE.ry*.95*s+dy,
-        x2:PIE.cx+PIE.rx*1.22*c+dx, y2:t+PIE.ry*1.55*s-6+dy, der:c>=0});
+      fuera.push({i, pct:it.pct,
+        x1:PIE.cx+PIE.rx*.95*c, y1:t+PIE.ry*.95*s,
+        x2:PIE.cx+PIE.rx*1.22*c, y2:t+PIE.ry*1.55*s-6, der:c>=0});
     }
   });
   /* si dos etiquetas de fuera se pisan, subo la segunda */
@@ -632,10 +654,10 @@ function _pieLabels(){
     const p=fuera[k-1], q=fuera[k];
     if(Math.abs(q.x2-p.x2)<28 && Math.abs(q.y2-p.y2)<14) q.y2=p.y2-14;
   }
-  return dentro+fuera.map(f=>
+  fuera.forEach(f=>add(f.i,
     `<line class="plead" x1="${f.x1.toFixed(1)}" y1="${f.y1.toFixed(1)}" x2="${f.x2.toFixed(1)}" y2="${f.y2.toFixed(1)}"/>`+
-    `<text class="plabel out" x="${(f.x2+(f.der?4:-4)).toFixed(1)}" y="${(f.y2+3.5).toFixed(1)}" text-anchor="${f.der?'start':'end'}">${f.pct.toFixed(0)}%</text>`
-  ).join('');
+    `<text class="plabel out" x="${(f.x2+(f.der?4:-4)).toFixed(1)}" y="${(f.y2+3.5).toFixed(1)}" text-anchor="${f.der?'start':'end'}">${f.pct.toFixed(0)}%</text>`));
+  return Object.keys(porTrozo).map(i=>`<g data-i="${i}">${porTrozo[i]}</g>`).join('');
 }
 
 function _pieSVG(){
@@ -680,18 +702,15 @@ function _pieSVG(){
      si está al fondo, da un paso ATRÁS y sigue detrás de los de delante. */
   const tramos=[];
   _pieItems.forEach((it,i)=>{
-    const sep=(i===_pieSel);
-    const dx=sep?Math.cos(it.mid*RAD)*out:0, dy=sep?Math.sin(it.mid*RAD)*out*ry/rx:0;
-    _pieParts(it).forEach(([s,e])=>tramos.push({i,it,s,e,dx,dy,z:_pieDepth(s,e)}));
+    _pieParts(it).forEach(([s,e])=>tramos.push({i,it,s,e,z:_pieDepth(s,e)}));
   });
   tramos.sort((a,b)=>a.z-b.z);
   let halo='';
   tramos.forEach(t=>{
-    const mov=(t.dx||t.dy)?` transform="translate(${t.dx.toFixed(1)} ${t.dy.toFixed(1)})"`:'';
-    cuerpo+=`<g class="slice3d" onclick="donutPick(${t.i})"${mov}>${_pieUnit(t.it,t.i,t.s,t.e)}</g>`;
+    cuerpo+=`<g class="slice3d" data-i="${t.i}" onclick="donutPick(${t.i})">${_pieUnit(t.it,t.i,t.s,t.e)}</g>`;
     /* misma forma en color encendido, detrás y borrosa: eso es el neón */
     const luz=_pieTone(_pieBase(t.it.color),.12);
-    halo+=`<g${mov}>`+
+    halo+=`<g data-i="${t.i}">`+
       (_pieVer(t.s,t.e)?`<path d="${_pieWallP(t.it,t.s,t.e)}" fill="${luz}"/>`:'')+
       `<path d="${_pieTopP(t.it,t.s,t.e)}" fill="${luz}"/></g>`;
   });
@@ -755,7 +774,11 @@ function renderDonut(){
   </div>`;
 }
 let _barsMode=localStorage.getItem('misFinanzas_barsMode')||'sem', _barsSel=-1;
-function setBarsMode(m){ _barsMode=m; _barsSel=-1; localStorage.setItem('misFinanzas_barsMode',m); renderBars(); }
+/* las barras sólo suben en cascada cuando el usuario cambia de periodo o la
+   primera vez. Si lo hicieran al guardar cada gasto, estarían moviendo datos
+   que estás leyendo, que es justo lo que no debe hacer una animación. */
+let _barsAnim=true;
+function setBarsMode(m){ _barsMode=m; _barsSel=-1; _barsAnim=true; localStorage.setItem('misFinanzas_barsMode',m); renderBars(); }
 function renderBars(){
   const el=document.getElementById('bars');
   const title=document.getElementById('barsTitle');
@@ -829,6 +852,7 @@ function renderBars(){
     <div class="bDet">${chip}</div>
     <div class="barsMsg">${msg}</div>
   </div>`;
+  _barsAnim=false;   /* ya subieron; los siguientes redibujados son sin animación */
 }
 
 /* Dos barras por periodo: ingresos (verde) y gastos (azul), planas con
@@ -853,7 +877,8 @@ function _barsSVG(periodos,tope,prom,eur0){
     [['ing',s.ing,x],['gas',s.gas,x+bw+4]].forEach(([k,v,bx])=>{
       if(v<=0) return;
       const y=yDe(v), h=Math.max(3,base-y), r=Math.min(5,bw/2.2);
-      const b=`<rect class="bBar" x="${bx.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${r.toFixed(1)}" fill="url(#bg_${k})"/>`;
+      const sube=_barsAnim?` up" style="animation-delay:${i*45}ms`:'';
+      const b=`<rect class="bBar${sube}" x="${bx.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${r.toFixed(1)}" fill="url(#bg_${k})"/>`;
       if(k==='ing') bIng+=b; else bGas+=b;
       if(verVal) vals+=`<text class="bVal ${k}" x="${(bx+bw/2).toFixed(1)}" y="${(y-6).toFixed(1)}">${eur0(v)}</text>`;
     });
@@ -895,13 +920,21 @@ function donutPick(i){
   const det=document.getElementById('pieDetail'), wrap=document.getElementById('pieWrap');
   if(!det||!wrap||!_pieItems[i]) return;
   _pieSel = (_pieSel===i) ? -1 : i;
-  wrap.innerHTML=_pieSVG();
+  /* sólo se mueve; el dibujo no se rehace. Así el bloque sale y vuelve
+     deslizándose, y se puede interrumpir a mitad tocando otro. */
+  wrap.querySelectorAll('g[data-i]').forEach(g=>{
+    const k=Number(g.dataset.i), it=_pieItems[k];
+    if(k===_pieSel && it){
+      const dx=Math.cos(it.mid*RAD)*PIE.out, dy=Math.sin(it.mid*RAD)*PIE.out*PIE.ry/PIE.rx;
+      g.setAttribute('transform',`translate(${dx.toFixed(1)} ${dy.toFixed(1)})`);
+    }else g.removeAttribute('transform');
+  });
   if(_pieSel<0){
     det.innerHTML='<span class="pdHint">Toca un trozo del pastel para ver su detalle</span>';
     return;
   }
   const it=_pieItems[_pieSel];
-  det.innerHTML=`<span class="pd"><span class="dot" style="background:${it.color};width:11px;height:11px"></span>${esc(it.name)}: ${money(it.val)} · ${it.pct.toFixed(0)}%</span>`;
+  det.innerHTML=`<span class="pd"><span class="dot" style="background:${_pieTone(_pieBase(it.color),.04)};width:11px;height:11px"></span>${esc(it.name)}: ${money(it.val)} · ${it.pct.toFixed(0)}%</span>`;
 }
 
 function renderProjections(){
