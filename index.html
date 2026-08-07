@@ -1076,6 +1076,20 @@ function renderProjections(){
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 /* ============ MODAL BASE ============ */
+/* Aviso de confirmación PROPIO. No se usa confirm() del navegador porque
+   Chrome lo bloquea si alguna vez marcaste "impedir más diálogos", y algunos
+   móviles lo suprimen: entonces devuelve "no" y la acción se cancela sin
+   decir nada, y parece que el botón está roto. */
+let _confirmar=null;
+function askConfirm(titulo,texto,textoBoton,alAceptar){
+  _confirmar=alAceptar;
+  openModal(`<h2>${titulo}</h2>
+    <div class="hint" style="margin-bottom:16px">${texto}</div>
+    <div class="modal-btns"><button class="cancel" onclick="closeModal()">Cancelar</button>
+    <button class="danger" style="margin-right:0" onclick="runConfirm()">${textoBoton}</button></div>`);
+}
+function runConfirm(){ const f=_confirmar; _confirmar=null; closeModal(); if(f) f(); }
+
 function openModal(html){ document.getElementById('modalBox').innerHTML=html; document.getElementById('modalBg').classList.add('open'); }
 function closeModal(){ document.getElementById('modalBg').classList.remove('open'); }
 document.getElementById('modalBg').addEventListener('click',e=>{ if(e.target.id==='modalBg') closeModal(); });
@@ -1205,10 +1219,13 @@ function saveAccount(id){
   closeModal(); renderAll();
 }
 function delAccount(id){
-  const used=state.incomes.some(i=>i.accountId===id)||state.expenses.some(e=>e.accountId===id);
-  if(used){ if(!confirm('Esta cuenta tiene movimientos. ¿Eliminarla de todos modos? Los movimientos quedarán sin cuenta.')) return; }
-  else if(!confirm('¿Eliminar esta cuenta?')) return;
-  state.accounts=state.accounts.filter(x=>x.id!==id); closeModal(); renderAll();
+  const a=state.accounts.find(x=>x.id===id);
+  const n=state.incomes.filter(i=>i.accountId===id).length+state.expenses.filter(e=>e.accountId===id).length;
+  askConfirm('Borrar cuenta',
+    n ? `<b>${esc(a?a.name:'Esta cuenta')}</b> tiene <b>${n} movimiento${n>1?'s':''}</b>. No se borran, pero se quedarán sin cuenta asignada.`
+      : `Vas a borrar <b>${esc(a?a.name:'esta cuenta')}</b>. No tiene ningún movimiento.`,
+    'Borrar',
+    ()=>{ state.accounts=state.accounts.filter(x=>x.id!==id); renderAll(); });
 }
 function touchAccount(id){ const a=state.accounts.find(x=>x.id===id); if(a) a.lastUpdated=Date.now(); }
 
@@ -1247,8 +1264,11 @@ function delCategory(id){
   const c=state.categories.find(x=>x.id===id); if(!c) return;
   const gs=state.expenses.filter(e=>e.categoryId===id);
   if(!gs.length){
-    if(!confirm('¿Eliminar la categoría "'+c.name+'"?')) return;
-    state.categories=state.categories.filter(x=>x.id!==id); closeModal(); renderAll(); return;
+    askConfirm('Borrar categoría',
+      `Vas a borrar <b>${esc(c.name)}</b>. No la has usado en ningún gasto, así que no se pierde nada.`,
+      'Borrar',
+      ()=>{ state.categories=state.categories.filter(x=>x.id!==id); renderAll(); });
+    return;
   }
   const otras=state.categories.filter(x=>x.id!==id);
   openModal(`<h2>Borrar "${esc(c.name)}"</h2>
@@ -1291,14 +1311,21 @@ function saveProjection(id){
   else state.projections.push({id:uid(),...data,createdAt:Date.now()});
   closeModal(); renderAll();
 }
-function delProjection(id){ if(!confirm('¿Eliminar esta meta?'))return; state.projections=state.projections.filter(x=>x.id!==id); closeModal(); renderAll(); }
+function delProjection(id){
+  const p=state.projections.find(x=>x.id===id);
+  askConfirm('Borrar meta',`Vas a borrar la meta <b>${esc(p?p.title:'')}</b>.`,'Borrar',
+    ()=>{ state.projections=state.projections.filter(x=>x.id!==id); renderAll(); });
+}
 
 /* ============ BORRAR MOVIMIENTO ============ */
 function delItem(type,id){
-  if(!confirm('¿Eliminar este movimiento?')) return;
-  state[type]=state[type].filter(x=>x.id!==id);
-  closeModal();   /* por si se borró desde la ficha */
-  renderAll();
+  const it=state[type].find(x=>x.id===id);
+  const qué = type==='expenses' ? 'gasto' : 'ingreso';
+  askConfirm('Borrar '+qué,
+    it ? `Vas a borrar <b>${esc(it.concept||qué)}</b> de <b>${money(it.amount)}</b>. El dinero volverá a tu cuenta.`
+       : '¿Seguro que quieres borrarlo?',
+    'Borrar',
+    ()=>{ state[type]=state[type].filter(x=>x.id!==id); renderAll(); });
 }
 
 /* ============ CALENDARIO ============ */
