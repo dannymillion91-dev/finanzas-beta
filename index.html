@@ -165,6 +165,32 @@
   .swatch span{width:30px;height:30px;border-radius:8px;cursor:pointer;border:2px solid transparent}
   .swatch span.sel{border-color:#fff}
 
+  /* Botón "Lista de gastos": es el acceso al historial completo */
+  .listBtn{width:100%;display:flex;align-items:center;gap:10px;background:var(--panel);
+    border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;margin-bottom:10px;
+    color:var(--txt);font-family:inherit;transition:transform .12s var(--ease-out),background .12s}
+  .listBtn:active{background:var(--panel2);transform:scale(.99)}
+  .listBtn .lbT{flex:1;text-align:left;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+  .listBtn .lbN{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:2px 9px;font-size:12px;font-weight:700;color:var(--muted)}
+  .listBtn .lbA{font-size:19px;color:var(--muted);line-height:1}
+  /* fila que se puede tocar para abrir su ficha */
+  .row.tapRow{cursor:pointer;transition:background .12s}
+  .row.tapRow:active{background:var(--panel2)}
+  .row .chev{color:var(--muted);font-size:17px;opacity:.5;padding-left:2px}
+  /* historial */
+  .backBtn{background:none;border:none;color:var(--accent);font-size:14px;font-weight:700;padding:0 0 12px;font-family:inherit}
+  .histHead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px}
+  .histHead .hhT{font-size:20px;font-weight:700}
+  .histHead .hhS{font-size:12px;color:var(--muted);margin-top:3px}
+  .histHead .hhV{font-size:20px;font-weight:700;color:var(--red)}
+  .mesHd{display:flex;align-items:baseline;justify-content:space-between;padding:0 4px 7px;margin-top:18px}
+  .mesHd:first-child{margin-top:0}
+  .mesHd .mn{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+  .mesHd .mv{font-size:13px;font-weight:700;color:var(--muted)}
+  /* pie de la ficha de un gasto ya apuntado */
+  .fichaPie{font-size:12px;color:var(--muted);text-align:center;margin:2px 0 14px}
+  .modal-btns .danger{background:none;border:1px solid var(--red);color:var(--red);border-radius:11px;padding:12px 16px;font-size:15px;font-weight:700;font-family:inherit;margin-right:auto}
+
   .hint{background:var(--panel2);border:1px dashed var(--line);border-radius:12px;padding:12px;font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px}
   .hint b{color:var(--txt)}
   .fab-note{font-size:11px;color:var(--muted);text-align:center;margin-top:10px}
@@ -313,13 +339,32 @@
         Manual
       </button>
     </div>
+    <button class="listBtn" onclick="showView('historial')">
+      <span class="lbT">Lista de gastos</span>
+      <span class="lbN" id="expCount">0</span>
+      <span class="lbA">›</span>
+    </button>
     <div class="table" id="expenseList"></div>
     <div class="table" style="margin-top:10px"><div class="total-row"><span>Total gastos</span><span class="amt neg" id="totalEx">€0</span></div></div>
     <div class="section-title">Categorías</div>
     <div class="table" id="catManage"></div>
+
     <div class="actions" style="margin-top:10px">
       <button class="btn btn-add" onclick="openCategory()">+ Nueva categoría</button>
     </div>
+  </div>
+
+  <!-- HISTORIAL DE GASTOS (se llega desde el botón "Lista de gastos") -->
+  <div class="view" id="view-historial">
+    <button class="backBtn" onclick="showView('gastos')">‹ Gastos</button>
+    <div class="histHead">
+      <div>
+        <div class="hhT">Lista de gastos</div>
+        <div class="hhS" id="histSub">—</div>
+      </div>
+      <div class="hhV" id="histTot">€0</div>
+    </div>
+    <div id="histList"></div>
   </div>
 
   <!-- CALENDARIO -->
@@ -421,8 +466,13 @@ function showView(name,el){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  (el||document.querySelector('.tab[data-view='+name+']')).classList.add('active');
+  /* el historial no tiene pestaña propia: se llega desde Gastos, así que
+     se deja marcada la de Gastos. Y si no hubiera pestaña, no se rompe. */
+  const pestana = (name==='historial') ? 'gastos' : name;
+  const t = el || document.querySelector('.tab[data-view='+pestana+']');
+  if(t) t.classList.add('active');
   if(name==='calendario') renderCalendar();
+  if(name==='historial') renderHistory();
   window.scrollTo(0,0);
 }
 
@@ -438,6 +488,7 @@ function renderAll(){
   document.getElementById('periodLbl').textContent=
     now.toLocaleDateString('es-ES',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase());
   renderAccounts(); renderIncomes(); renderExpenses(); renderCategories(); renderDonut(); renderBars(); renderProjections();
+  if(document.getElementById('view-historial').classList.contains('active')) renderHistory();
   save();
 }
 
@@ -481,35 +532,69 @@ function renderIncomes(){
   </div>`).join('');
 }
 
+/* El color de una categoría sale de la paleta del gráfico, por su puesto en
+   la lista. Así el punto de un gasto es EXACTAMENTE el mismo color que su
+   bloque en el pastel; antes se contradecían. */
+function pieDot(hex){ return _pieTone(_pieBase(hex),.03); }   /* ÚNICO sitio donde se decide el tono del punto */
+function catColor(cid){
+  const k=state.categories.findIndex(c=>c.id===cid);
+  return pieDot(PIE_PAL[(k<0?0:k)%PIE_PAL.length]);
+}
+/* una línea de gasto; al tocarla se abre su ficha completa */
+function expRow(e){
+  const c=catById(e.categoryId);
+  const cuenta = state.accounts.length>1 ? ' · '+esc(acctName(e.accountId)) : '';
+  return `<div class="row tapRow" onclick="openExpense(null,'${e.id}')">
+    <div class="date">${fmtDay(e.date)}</div>
+    <div class="main">
+      <div class="concept">${esc(e.concept||'Gasto')}</div>
+      <div class="meta"><span class="dot" style="background:${catColor(e.categoryId)}"></span>${c?esc(c.name):'Sin categoría'}${cuenta}</div>
+    </div>
+    <div class="amt neg">-${money(e.amount)}</div>
+    <span class="chev">›</span>
+  </div>`;
+}
 function renderExpenses(){
   const el=document.getElementById('expenseList');
   const list=[...state.expenses].sort((a,b)=>b.date.localeCompare(a.date));
+  const cnt=document.getElementById('expCount');
+  if(cnt) cnt.textContent=list.length;
   if(!list.length){ el.innerHTML='<div class="empty">Aún no hay gastos.<br>Toca <b>Manual</b> para añadir uno.</div>'; return; }
-  el.innerHTML=list.map(e=>{
-    const c=catById(e.categoryId);
-    return `<div class="row">
-      <div class="date">${fmtDay(e.date)}</div>
-      <div class="main">
-        <div class="concept">${esc(e.concept||'Gasto')}</div>
-        <div class="meta"><span class="dot" style="background:${c?c.color:'#64748b'}"></span>${c?esc(c.name):'Sin categoría'} · ${esc(acctName(e.accountId))}</div>
-      </div>
-      <div class="amt neg">-${money(e.amount)}</div>
-      <button class="del" onclick="delItem('expenses','${e.id}')">×</button>
-    </div>`;
+  /* sólo los 3 últimos: el historial completo está detrás del botón */
+  el.innerHTML=list.slice(0,3).map(expRow).join('');
+}
+
+/* ============ HISTORIAL COMPLETO, POR MESES ============ */
+function renderHistory(){
+  const el=document.getElementById('histList');
+  const sub=document.getElementById('histSub'), tot=document.getElementById('histTot');
+  const list=[...state.expenses].sort((a,b)=>b.date.localeCompare(a.date));
+  const suma=list.reduce((s,e)=>s+Number(e.amount),0);
+  if(sub) sub.textContent=list.length===1?'1 gasto registrado':list.length+' gastos registrados';
+  if(tot) tot.textContent=money(suma);
+  if(!list.length){ el.innerHTML='<div class="empty">Aún no hay gastos.</div>'; return; }
+  const meses={};
+  list.forEach(e=>{ const k=e.date.slice(0,7); (meses[k]=meses[k]||[]).push(e); });
+  el.innerHTML=Object.keys(meses).sort().reverse().map(k=>{
+    const arr=meses[k], t=arr.reduce((s,x)=>s+Number(x.amount),0);
+    const d=new Date(k+'-01T00:00:00');
+    let nom=d.toLocaleDateString('es-ES',{month:'long',year:'numeric'});
+    nom=nom.charAt(0).toUpperCase()+nom.slice(1);
+    return `<div class="mesHd"><span class="mn">${nom}</span><span class="mv">${money(t)}</span></div>
+      <div class="table">${arr.map(expRow).join('')}</div>`;
   }).join('');
 }
 
 function renderCategories(){
   const el=document.getElementById('catManage');
   el.innerHTML=state.categories.map(c=>`<div class="row">
-    <span class="dot" style="background:${c.color};width:14px;height:14px"></span>
+    <span class="dot" style="background:${catColor(c.id)};width:14px;height:14px"></span>
     <div class="main"><div class="concept">${esc(c.name)}</div></div>
     <button class="del" onclick="delCategory('${c.id}')">×</button>
   </div>`).join('');
 }
 
 let _pieItems=[], _pieSel=-1;
-/* Geometría del pastel 3D: elipse (rx/ry) + altura escalonada (hMin..hMax) */
 /* Paleta neón del circular, en el mismo idioma que las barras (el 1º es el verde
    de "ingresos" y el 2º el cian de "gastos"). Cada categoría coge un color fijo
    según su posición en la lista de categorías, así no cambia de color de un mes
@@ -762,7 +847,7 @@ function renderDonut(){
   orden.forEach(it=>{ it.a0=ang; it.a1=ang+anch; it.mid=(it.a0+it.a1)/2; ang=it.a1; });
   _pieSel=-1;
   const legend=_pieItems.map((it,i)=>`<div class="lg" onclick="donutPick(${i})">
-    <span class="dot" style="background:${_pieTone(_pieBase(it.color),.02)};width:9px;height:9px;flex:none"></span>
+    <span class="dot" style="background:${pieDot(it.color)};width:9px;height:9px;flex:none"></span>
     <span class="ln" title="${esc(it.name)}">${esc(it.name)}</span>
     <span class="lv">${money(it.val)}</span></div>`).join('');
   el.innerHTML=`<div class="pieCard">
@@ -933,7 +1018,7 @@ function donutPick(i){
     return;
   }
   const it=_pieItems[_pieSel];
-  det.innerHTML=`<span class="pd"><span class="dot" style="background:${_pieTone(_pieBase(it.color),.04)};width:11px;height:11px"></span>${esc(it.name)}: ${money(it.val)} · ${it.pct.toFixed(0)}%</span>`;
+  det.innerHTML=`<span class="pd"><span class="dot" style="background:${pieDot(it.color)};width:11px;height:11px"></span>${esc(it.name)}: ${money(it.val)} · ${it.pct.toFixed(0)}%</span>`;
 }
 
 function renderProjections(){
@@ -988,29 +1073,40 @@ function saveIncome(){
 }
 
 /* ============ GASTO ============ */
-function openExpense(pre){
+/* pre = datos sugeridos (foto/IA). id = ficha de un gasto ya registrado. */
+function openExpense(pre,id){
   if(!state.accounts.length){ alert('Primero crea una cuenta en la pestaña Inicio.'); return; }
-  pre=pre||{};
+  const ya = id ? state.expenses.find(x=>x.id===id) : null;
+  pre = ya ? {amount:ya.amount, concept:ya.concept, date:ya.date, notes:ya.notes} : (pre||{});
   const banner=pre._ai?`<div class="hint" style="margin-bottom:14px">📸 Datos leídos por la IA. <b>Revísalos y corrígelos</b> si hace falta antes de guardar.</div>`:'';
-  let catId='';
-  if(pre.category){ const c=state.categories.find(x=>x.name.toLowerCase()===String(pre.category).toLowerCase()); if(c) catId=c.id; }
-  openModal(`<h2>Nuevo gasto</h2>${banner}
-    <div class="fld"><label>Monto (${CUR})</label><input id="fAmt" type="number" inputmode="decimal" step="0.01" placeholder="0.00" value="${pre.amount!=null?pre.amount:''}" autofocus></div>
+  let catId = ya ? ya.categoryId : '';
+  if(!ya && pre.category){ const c=state.categories.find(x=>x.name.toLowerCase()===String(pre.category).toLowerCase()); if(c) catId=c.id; }
+  const acctId = ya ? ya.accountId : '';
+  /* en una ficha ya registrada se dice cuándo se apuntó, y se puede borrar */
+  const sello = (ya&&ya.createdAt)
+    ? `<div class="fichaPie">Apuntado el ${new Date(ya.createdAt).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'})} a las ${new Date(ya.createdAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</div>` : '';
+  const btnBorrar = ya ? `<button class="danger" onclick="delItem('expenses','${ya.id}')">Borrar</button>` : '';
+  openModal(`<h2>${ya?'Detalle del gasto':'Nuevo gasto'}</h2>${banner}
+    <div class="fld"><label>Monto (${CUR})</label><input id="fAmt" type="number" inputmode="decimal" step="0.01" placeholder="0.00" value="${pre.amount!=null?pre.amount:''}" ${ya?'':'autofocus'}></div>
     <div class="fld"><label>Concepto</label><input id="fConcept" placeholder="Ej. Supermercado..." value="${pre.concept?esc(pre.concept):(pre.store?esc(pre.store):'')}"></div>
     <div class="fld"><label>Categoría</label><select id="fCat">${catOptions(catId)}</select></div>
     <div class="fld"><label>Fecha</label><input id="fDate" type="date" value="${pre.date||todayISO()}" max="${todayISO()}"></div>
-    <div class="fld"><label>¿De qué cuenta salió?</label><select id="fAcct">${acctOptions()}</select></div>
-    <div class="fld"><label>Nota (opcional)</label><input id="fNotes"></div>
-    <div class="modal-btns"><button class="cancel" onclick="closeModal()">Cancelar</button><button class="save" onclick="saveExpense()">Guardar</button></div>`);
+    <div class="fld"><label>¿De qué cuenta salió?</label><select id="fAcct">${acctOptions(acctId)}</select></div>
+    <div class="fld"><label>Nota (opcional)</label><input id="fNotes" value="${pre.notes?esc(pre.notes):(pre.bank?esc(pre.bank):'')}"></div>
+    ${sello}
+    <div class="modal-btns">${btnBorrar}<button class="cancel" onclick="closeModal()">Cancelar</button><button class="save" onclick="saveExpense(${ya?"'"+ya.id+"'":''})">Guardar</button></div>`);
 }
-function saveExpense(){
+function saveExpense(id){
   const amt=parseFloat(document.getElementById('fAmt').value);
   if(!(amt>0)) return alert('Escribe un monto válido mayor a 0.');
-  state.expenses.push({id:uid(),accountId:document.getElementById('fAcct').value,
+  const datos={accountId:document.getElementById('fAcct').value,
     categoryId:document.getElementById('fCat').value,amount:amt,
     date:document.getElementById('fDate').value||todayISO(),
     concept:document.getElementById('fConcept').value.trim(),
-    notes:document.getElementById('fNotes').value.trim(),createdAt:Date.now()});
+    notes:document.getElementById('fNotes').value.trim()};
+  const ya = id ? state.expenses.find(x=>x.id===id) : null;
+  if(ya) Object.assign(ya,datos);          /* corregir un gasto ya apuntado */
+  else state.expenses.push(Object.assign({id:uid(),createdAt:Date.now()},datos));
   touchAccount(document.getElementById('fAcct').value);
   closeModal(); renderAll();
 }
@@ -1104,7 +1200,9 @@ function delProjection(id){ if(!confirm('¿Eliminar esta meta?'))return; state.p
 /* ============ BORRAR MOVIMIENTO ============ */
 function delItem(type,id){
   if(!confirm('¿Eliminar este movimiento?')) return;
-  state[type]=state[type].filter(x=>x.id!==id); renderAll();
+  state[type]=state[type].filter(x=>x.id!==id);
+  closeModal();   /* por si se borró desde la ficha */
+  renderAll();
 }
 
 /* ============ CALENDARIO ============ */
