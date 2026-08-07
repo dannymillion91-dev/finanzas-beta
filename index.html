@@ -187,6 +187,15 @@
   .mesHd:first-child{margin-top:0}
   .mesHd .mn{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700}
   .mesHd .mv{font-size:13px;font-weight:700;color:var(--muted)}
+  /* aviso en vivo de cómo queda el saldo de la cuenta */
+  .impacto{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px}
+  .impacto .imT{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px}
+  .impacto .imR{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:2px 0}
+  .impacto .imR span:first-child{color:var(--muted)}
+  .impacto b{font-weight:700}
+  .impacto b.dn{color:var(--red)} .impacto b.up{color:var(--green)}
+  .colorFijo{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);
+    background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:10px 12px}
   /* pie de la ficha de un gasto ya apuntado */
   .fichaPie{font-size:12px;color:var(--muted);text-align:center;margin:2px 0 14px}
   .modal-btns .danger{background:none;border:1px solid var(--red);color:var(--red);border-radius:11px;padding:12px 16px;font-size:15px;font-weight:700;font-family:inherit;margin-right:auto}
@@ -346,12 +355,27 @@
     </button>
     <div class="table" id="expenseList"></div>
     <div class="table" style="margin-top:10px"><div class="total-row"><span>Total gastos</span><span class="amt neg" id="totalEx">€0</span></div></div>
-    <div class="section-title">Categorías</div>
-    <div class="table" id="catManage"></div>
+    <button class="listBtn" onclick="showView('categorias')">
+      <span class="lbT">Categorías</span>
+      <span class="lbN" id="catCount">0</span>
+      <span class="lbA">›</span>
+    </button>
+  </div>
 
-    <div class="actions" style="margin-top:10px">
+  <!-- CATEGORÍAS (se llega desde el botón de la pantalla de Gastos) -->
+  <div class="view" id="view-categorias">
+    <button class="backBtn" onclick="showView('gastos')">‹ Gastos</button>
+    <div class="histHead">
+      <div>
+        <div class="hhT">Categorías</div>
+        <div class="hhS" id="catSub">—</div>
+      </div>
+    </div>
+    <div class="table" id="catManage"></div>
+    <div class="actions" style="margin-top:12px">
       <button class="btn btn-add" onclick="openCategory()">+ Nueva categoría</button>
     </div>
+    <div class="hint" style="margin-top:14px">El <b>color</b> de cada categoría lo pone el gráfico según su posición en esta lista, para que sea siempre el mismo. Puedes cambiar el <b>nombre</b> cuando quieras: se actualiza en todos tus gastos.</div>
   </div>
 
   <!-- HISTORIAL DE GASTOS (se llega desde el botón "Lista de gastos") -->
@@ -468,7 +492,7 @@ function showView(name,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   /* el historial no tiene pestaña propia: se llega desde Gastos, así que
      se deja marcada la de Gastos. Y si no hubiera pestaña, no se rompe. */
-  const pestana = (name==='historial') ? 'gastos' : name;
+  const pestana = (name==='historial'||name==='categorias') ? 'gastos' : name;
   const t = el || document.querySelector('.tab[data-view='+pestana+']');
   if(t) t.classList.add('active');
   if(name==='calendario') renderCalendar();
@@ -587,11 +611,22 @@ function renderHistory(){
 
 function renderCategories(){
   const el=document.getElementById('catManage');
-  el.innerHTML=state.categories.map(c=>`<div class="row">
-    <span class="dot" style="background:${catColor(c.id)};width:14px;height:14px"></span>
-    <div class="main"><div class="concept">${esc(c.name)}</div></div>
-    <button class="del" onclick="delCategory('${c.id}')">×</button>
-  </div>`).join('');
+  const cnt=document.getElementById('catCount'), sub=document.getElementById('catSub');
+  if(cnt) cnt.textContent=state.categories.length;
+  if(sub) sub.textContent=state.categories.length===1?'1 categoría':state.categories.length+' categorías';
+  el.innerHTML=state.categories.map(c=>{
+    const gs=state.expenses.filter(e=>e.categoryId===c.id);
+    const tot=gs.reduce((s,e)=>s+Number(e.amount),0);
+    const uso = gs.length ? `${gs.length} gasto${gs.length>1?'s':''} · ${money(tot)}` : 'Sin gastos todavía';
+    return `<div class="row tapRow" onclick="openCategory('${c.id}')">
+      <span class="dot" style="background:${catColor(c.id)};width:14px;height:14px;flex:none"></span>
+      <div class="main">
+        <div class="concept">${esc(c.name)}</div>
+        <div class="meta">${uso}</div>
+      </div>
+      <span class="chev">›</span>
+    </div>`;
+  }).join('');
 }
 
 let _pieItems=[], _pieSel=-1;
@@ -1093,8 +1128,40 @@ function openExpense(pre,id){
     <div class="fld"><label>Fecha</label><input id="fDate" type="date" value="${pre.date||todayISO()}" max="${todayISO()}"></div>
     <div class="fld"><label>¿De qué cuenta salió?</label><select id="fAcct">${acctOptions(acctId)}</select></div>
     <div class="fld"><label>Nota (opcional)</label><input id="fNotes" value="${pre.notes?esc(pre.notes):(pre.bank?esc(pre.bank):'')}"></div>
+    <div class="impacto" id="fImpacto"></div>
     ${sello}
     <div class="modal-btns">${btnBorrar}<button class="cancel" onclick="closeModal()">Cancelar</button><button class="save" onclick="saveExpense(${ya?"'"+ya.id+"'":''})">Guardar</button></div>`);
+  /* el saldo se recalcula solo, pero hay que VERLO: se avisa en vivo de cómo
+     queda la cuenta según lo que se escriba */
+  const refresca=()=>pintaImpacto(ya?ya.id:null);
+  ['fAmt','fAcct'].forEach(k=>{
+    const c=document.getElementById(k);
+    c.addEventListener('input',refresca); c.addEventListener('change',refresca);
+  });
+  refresca();
+}
+/* Muestra cómo queda el saldo de la cuenta si se guarda lo que hay escrito.
+   Ojo: acctBalance ya incluye el gasto viejo, por eso se le devuelve antes
+   de restar el nuevo importe. */
+function pintaImpacto(id){
+  const el=document.getElementById('fImpacto'); if(!el) return;
+  const ya = id ? state.expenses.find(x=>x.id===id) : null;
+  const nueva=document.getElementById('fAcct').value;
+  const amt=parseFloat(document.getElementById('fAmt').value)||0;
+  const nom=a=>esc(acctName(a));
+  let html='';
+  if(ya && ya.accountId!==nueva){
+    const antesVieja=acctBalance(ya.accountId), despVieja=antesVieja+Number(ya.amount);
+    const antesNueva=acctBalance(nueva), despNueva=antesNueva-amt;
+    html=`<div class="imR"><span>${nom(ya.accountId)}</span><span>${money(antesVieja)} <b class="up">→ ${money(despVieja)}</b></span></div>`
+        +`<div class="imR"><span>${nom(nueva)}</span><span>${money(antesNueva)} <b class="dn">→ ${money(despNueva)}</b></span></div>`;
+  }else{
+    const antes=acctBalance(nueva);
+    const desp=antes+(ya?Number(ya.amount):0)-amt;
+    const dir=desp>antes?'up':(desp<antes?'dn':'');
+    html=`<div class="imR"><span>${nom(nueva)}</span><span>${money(antes)} <b class="${dir}">→ ${money(desp)}</b></span></div>`;
+  }
+  el.innerHTML=`<div class="imT">Cómo queda tu cuenta</div>${html}`;
 }
 function saveExpense(id){
   const amt=parseFloat(document.getElementById('fAmt').value);
@@ -1148,27 +1215,56 @@ function touchAccount(id){ const a=state.accounts.find(x=>x.id===id); if(a) a.la
 /* ============ CATEGORÍA ============ */
 const COLORS=['#22c55e','#3b82f6','#f59e0b','#a855f7','#ef4444','#14b8a6','#ec4899','#64748b'];
 let pickColor=COLORS[0];
-function openCategory(){
-  pickColor=COLORS[0];
-  openModal(`<h2>Nueva categoría</h2>
-    <div class="fld"><label>Nombre</label><input id="cName" placeholder="Ej. Transporte" autofocus></div>
-    <div class="fld"><label>Color</label><div class="swatch" id="cSwatch">
-      ${COLORS.map((c,i)=>`<span data-c="${c}" style="background:${c}" class="${i===0?'sel':''}" onclick="selColor(this)"></span>`).join('')}
-    </div></div>
-    <div class="modal-btns"><button class="cancel" onclick="closeModal()">Cancelar</button><button class="save" onclick="saveCategory()">Guardar</button></div>`);
+function openCategory(id){
+  const c = id ? state.categories.find(x=>x.id===id) : null;
+  const gs = c ? state.expenses.filter(e=>e.categoryId===c.id) : [];
+  const tot = gs.reduce((s,e)=>s+Number(e.amount),0);
+  /* El color ya no se elige: lo da la posición en la lista, para que el
+     bloque del gráfico y el punto de cada gasto sean siempre el mismo. */
+  const muestra = `<div class="fld"><label>Color</label>
+    <div class="colorFijo"><span class="dot" style="background:${catColor(id||'')};width:18px;height:18px"></span>
+    <span>Se lo pone el gráfico según su posición en la lista</span></div></div>`;
+  const uso = c ? `<div class="fichaPie">${gs.length?`${gs.length} gasto${gs.length>1?'s':''} · ${money(tot)}`:'Todavía no la has usado en ningún gasto'}</div>` : '';
+  const btnBorrar = c ? `<button class="danger" onclick="delCategory('${c.id}')">Borrar</button>` : '';
+  openModal(`<h2>${c?'Editar categoría':'Nueva categoría'}</h2>
+    <div class="fld"><label>Nombre</label><input id="cName" value="${c?esc(c.name):''}" placeholder="Ej. Transporte" autofocus></div>
+    ${muestra}${uso}
+    <div class="modal-btns">${btnBorrar}<button class="cancel" onclick="closeModal()">Cancelar</button><button class="save" onclick="saveCategory(${c?"'"+c.id+"'":''})">Guardar</button></div>`);
 }
-function selColor(el){ document.querySelectorAll('#cSwatch span').forEach(s=>s.classList.remove('sel')); el.classList.add('sel'); pickColor=el.dataset.c; }
-function saveCategory(){
+function saveCategory(id){
   const name=document.getElementById('cName').value.trim();
   if(!name) return alert('Escribe un nombre.');
-  state.categories.push({id:uid(),name,color:pickColor}); closeModal(); renderAll();
+  const repe=state.categories.find(x=>x.name.toLowerCase()===name.toLowerCase() && x.id!==id);
+  if(repe) return alert('Ya tienes una categoría con ese nombre.');
+  const c = id ? state.categories.find(x=>x.id===id) : null;
+  if(c) c.name=name;                                    /* renombrar: los gastos van por id, así que se actualizan solos */
+  else state.categories.push({id:uid(),name,color:'#64748b'});
+  closeModal(); renderAll();
 }
+/* Borrar una categoría con gastos dentro: hay que decidir qué pasa con ellos. */
 function delCategory(id){
   if(state.categories.length<=1) return alert('Debe quedar al menos una categoría.');
-  const used=state.expenses.some(e=>e.categoryId===id);
-  if(used && !confirm('Hay gastos con esta categoría. ¿Eliminarla igual?')) return;
-  if(!used && !confirm('¿Eliminar esta categoría?')) return;
-  state.categories=state.categories.filter(x=>x.id!==id); renderAll();
+  const c=state.categories.find(x=>x.id===id); if(!c) return;
+  const gs=state.expenses.filter(e=>e.categoryId===id);
+  if(!gs.length){
+    if(!confirm('¿Eliminar la categoría "'+c.name+'"?')) return;
+    state.categories=state.categories.filter(x=>x.id!==id); closeModal(); renderAll(); return;
+  }
+  const otras=state.categories.filter(x=>x.id!==id);
+  openModal(`<h2>Borrar "${esc(c.name)}"</h2>
+    <div class="hint" style="margin-bottom:14px">Tiene <b>${gs.length} gasto${gs.length>1?'s':''}</b> por valor de <b>${money(gs.reduce((s,e)=>s+Number(e.amount),0))}</b>.
+    Esos gastos no se borran: hay que decidir a qué categoría pasan.</div>
+    <div class="fld"><label>Pasar esos gastos a…</label><select id="cMove">
+      ${otras.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('')}
+    </select></div>
+    <div class="modal-btns"><button class="cancel" onclick="openCategory('${id}')">Atrás</button>
+    <button class="save" onclick="delCategoryDo('${id}')">Mover y borrar</button></div>`);
+}
+function delCategoryDo(id){
+  const destino=document.getElementById('cMove').value;
+  state.expenses.forEach(e=>{ if(e.categoryId===id) e.categoryId=destino; });
+  state.categories=state.categories.filter(x=>x.id!==id);
+  closeModal(); renderAll();
 }
 
 /* ============ PROYECCIÓN ============ */
