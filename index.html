@@ -306,6 +306,12 @@
       <button class="btn btn-add" onclick="openAccount()">+ Añadir cuenta</button>
     </div>
 
+    <div class="section-title">Probar la app</div>
+    <div class="hint">Rellena la app con <b>tres meses de movimientos inventados</b> para ver cómo queda todo funcionando. <b>Borra lo que tengas ahora</b>, así que si ya has apuntado cosas de verdad, guarda antes una copia aquí abajo.</div>
+    <div class="actions">
+      <button class="btn btn-manual" onclick="demoData()">🧪 Rellenar con datos de ejemplo</button>
+    </div>
+
     <div class="section-title">Copia de seguridad</div>
     <div class="hint">Guarda TODOS tus datos en un archivo dentro de tu dispositivo. Si cambias de teléfono o pasa algo, podrás restaurarlos aquí.</div>
     <div class="actions">
@@ -1319,6 +1325,63 @@ function delProjection(id){
 }
 
 /* ============ BORRAR MOVIMIENTO ============ */
+/* ============ DATOS DE EJEMPLO (para ver la app llena) ============ */
+function demoData(){
+  askConfirm('Rellenar con datos de ejemplo',
+    'Se van a <b>borrar tus movimientos actuales</b> y se pondrán tres meses inventados: unas 45 anotaciones repartidas por categorías, más las nóminas. Sirve para ver la app funcionando. Si tenías algo real, guarda antes una copia.',
+    'Rellenar', ()=>{
+    const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const hoy=new Date(); hoy.setHours(0,0,0,0);
+    const hace=n=>{ const d=new Date(hoy); d.setDate(hoy.getDate()-n); return iso(d); };
+    state.accounts=[
+      {id:'dBanco',name:'Banco',type:'bank',opening:1200,lastUpdated:Date.now()},
+      {id:'dCash', name:'Efectivo',type:'cash',opening:150, lastUpdated:Date.now()}
+    ];
+    /* cada categoría con conceptos y precios que pegan con ella */
+    const cats=state.categories;
+    const guion=[
+      {c:0, txt:['Mercadona','Lidl','Carrefour','Frutería','Panadería','Pescadería'], min:9,  max:78, cada:5},
+      {c:1, txt:['Zara','Zapatillas','Calcetines','Chaqueta'],                        min:12, max:65, cada:16},
+      {c:2, txt:['Gasolina','Bus','Metro','Taxi','Parking'],                          min:2,  max:55, cada:7},
+      {c:3, txt:['Netflix','Spotify','Móvil','Internet'],                             min:8,  max:42, cada:11},
+      {c:4, txt:['Bombillas','Fontanero','Pilas','Filtro'],                           min:5,  max:90, cada:19},
+      {c:5, txt:['Café','Farmacia','Regalo','Libro','Cine'],                          min:2,  max:35, cada:8}
+    ];
+    const gastos=[];
+    let n=0;
+    guion.forEach(g=>{
+      const cat=cats[g.c%cats.length]; if(!cat) return;
+      for(let d=1; d<=88; d+=g.cada){
+        const semilla=Math.abs(Math.sin((d+1)*(g.c+2)*7.3));           /* varía pero siempre igual */
+        const imp=Math.round((g.min+semilla*(g.max-g.min))*100)/100;
+        /* en efectivo sólo van compras pequeñas: si no, la cuenta de
+           efectivo se quedaría en números rojos y sería un dato falso */
+        gastos.push({id:'dg'+(n++), accountId: (imp<=15 && d%2===0) ? 'dCash' : 'dBanco',
+          categoryId:cat.id, amount:imp, date:hace(d),
+          concept:g.txt[Math.floor(semilla*g.txt.length)%g.txt.length], notes:'',
+          createdAt:Date.now()-d*864e5});
+      }
+    });
+    /* nómina el día 1 de cada mes + un extra */
+    const ing=[];
+    [2,32,62].forEach((d,k)=>ing.push({id:'di'+k, accountId:'dBanco', amount:1450,
+      date:hace(d), concept:'Nómina', notes:'', createdAt:Date.now()-d*864e5}));
+    ing.push({id:'diX', accountId:'dCash', amount:220, date:hace(24), concept:'Trabajo extra', notes:'', createdAt:Date.now()});
+    state.expenses=gastos; state.incomes=ing;
+    state.projections=[{id:'dp1',title:'Viaje en verano',target:1200,progress:340,targetDate:hace(-180)}];
+    _barsAnim=true; renderAll(); showView('gastos');
+  });
+}
+/* Si la app está COMPLETAMENTE vacía se rellena sola con el ejemplo, para
+   que se vea funcionando sin tener que apuntar nada a mano. En cuanto haya
+   un solo movimiento de verdad, esto ya no vuelve a saltar nunca. */
+function demoSiVacia(){
+  if(state.expenses.length || state.incomes.length) return;
+  if(localStorage.getItem('misFinanzas_demoYa')) return;
+  localStorage.setItem('misFinanzas_demoYa','1');
+  const f=_confirmar; demoData(); runConfirm(); _confirmar=f;   /* lanza el relleno sin preguntar */
+}
+
 function delItem(type,id){
   const it=state[type].find(x=>x.id===id);
   const qué = type==='expenses' ? 'gasto' : 'ingreso';
@@ -1538,6 +1601,7 @@ function restoreData(){
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 
 /* ============ INICIO ============ */
+demoSiVacia();
 renderAll();
 </script>
 </body>
