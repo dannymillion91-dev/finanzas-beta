@@ -190,13 +190,13 @@
   .pieDetail{display:flex;align-items:center;justify-content:center;min-height:34px;margin-top:12px}
   .pieDetail .pd{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:6px 14px;display:flex;gap:8px;align-items:center;font-size:14px;font-weight:600}
   .pieDetail .pdHint{font-size:12px;color:var(--muted)}
-  .legend{display:flex;flex-direction:column;margin-top:10px}
-  .lg{display:flex;align-items:center;gap:10px;font-size:14px;padding:9px 6px;cursor:pointer;border-bottom:1px solid var(--line)}
-  .lg:last-child{border-bottom:none}
+  /* Dos columnas y sin el %: el porcentaje ya está escrito en el pastel,
+     repetirlo aquí sólo alargaba la lista. */
+  .legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px 8px;margin-top:12px}
+  .lg{display:flex;align-items:center;gap:7px;font-size:12px;padding:6px 5px;cursor:pointer;border-radius:8px}
   .lg:active{background:var(--panel2)}
-  .lg .ln{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
-  .lg .lp{font-weight:700;width:42px;text-align:right}
-  .lg .lv{color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap;width:86px;text-align:right}
+  .lg .ln{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+  .lg .lv{color:var(--muted);font-weight:600;font-size:11.5px;white-space:nowrap}
 
   /* Gráfico de barras (tendencia) */
   .barsCard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 14px 12px;margin-bottom:6px}
@@ -762,9 +762,8 @@ function renderDonut(){
   orden.forEach(it=>{ it.a0=ang; it.a1=ang+anch; it.mid=(it.a0+it.a1)/2; ang=it.a1; });
   _pieSel=-1;
   const legend=_pieItems.map((it,i)=>`<div class="lg" onclick="donutPick(${i})">
-    <span class="dot" style="background:${_pieTone(_pieBase(it.color),.02)};width:12px;height:12px"></span>
-    <span class="ln">${esc(it.name)}</span>
-    <span class="lp">${it.pct.toFixed(0)}%</span>
+    <span class="dot" style="background:${_pieTone(_pieBase(it.color),.02)};width:9px;height:9px;flex:none"></span>
+    <span class="ln" title="${esc(it.name)}">${esc(it.name)}</span>
     <span class="lv">${money(it.val)}</span></div>`).join('');
   el.innerHTML=`<div class="pieCard">
     <div class="pieHead"><span class="ph1">Total gastos</span><span class="ph2">${money(te)}</span></div>
