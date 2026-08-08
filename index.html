@@ -460,6 +460,60 @@
   .barsMsg b{color:var(--txt);font-weight:500}
   .barsMsg svg{width:15px;height:15px;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
+  /* ===== Puerta: registro y entrada con código ===== */
+  .gate{position:fixed;inset:0;z-index:400;background:var(--bg);display:flex;align-items:center;
+    justify-content:center;padding:26px 24px calc(26px + env(safe-area-inset-bottom));overflow-y:auto}
+  .gate[hidden]{display:none}
+  .gateBox{width:100%;max-width:340px;text-align:center}
+  .gateLogo{font-family:var(--f-disp);font-size:31px;font-weight:600;letter-spacing:-.04em;line-height:1.1}
+  .gateSub{font-size:13.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+  .gateSub b{color:var(--txt);font-weight:500}
+  .gateFld{margin:28px 0 4px;text-align:left}
+  .gateFld label{display:block;font-size:11px;color:var(--faint);font-weight:500;margin-bottom:8px;
+    text-transform:uppercase;letter-spacing:.1em}
+  .gateFld input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    padding:15px;border-radius:var(--r-ctl);font-size:17px;caret-color:var(--accent);text-align:center}
+  .gateFld input:focus{outline:none;border-color:var(--accent);background:var(--panel3);
+    box-shadow:0 0 0 3px rgba(79,245,167,.13)}
+  /* los puntos del código */
+  .pinDots{display:flex;justify-content:center;gap:15px;margin:30px 0 26px;height:14px}
+  .pinDots i{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--line2);
+    transition:background .2s var(--ease-out),border-color .2s,transform .2s}
+  .pinDots i.on{background:var(--accent);border-color:var(--accent);transform:scale(1.15);
+    box-shadow:0 1px 12px -2px var(--accent)}
+  .pinDots.mal{animation:tiembla .42s}
+  .pinDots.mal i{border-color:var(--red);background:transparent;transform:none;box-shadow:none}
+  @keyframes tiembla{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}
+    50%{transform:translateX(8px)}80%{transform:translateX(-4px)}}
+  .teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;max-width:270px;margin:0 auto}
+  .teclado button{aspect-ratio:1;border-radius:50%;background:var(--panel);border:1px solid var(--line);
+    color:var(--txt);font-family:var(--f-disp);font-size:25px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;
+    transition:background .12s,border-color .12s,transform .1s var(--ease-out)}
+  .teclado button:hover{background:var(--panel2);border-color:var(--line2)}
+  .teclado button:active{background:var(--panel3);transform:scale(.93)}
+  .teclado .hueco{visibility:hidden;pointer-events:none}
+  .teclado .borra{background:transparent;border-color:transparent}
+  .teclado .borra svg{width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:1.7;
+    stroke-linecap:round;stroke-linejoin:round}
+  .gateErr{color:var(--red);font-size:13px;font-weight:500;min-height:19px;margin-top:20px}
+  .gateLink{background:none;border:none;color:var(--muted);font-size:13px;font-weight:500;
+    margin-top:26px;padding:8px;font-family:inherit;text-decoration:underline;
+    text-underline-offset:3px;text-decoration-color:var(--line2)}
+  .gateLink:hover{color:var(--accent)}
+  .gateAviso{font-size:12px;color:var(--faint);line-height:1.6;margin-top:24px;
+    border-top:1px solid var(--line);padding-top:18px;text-align:left}
+  .gateAviso b{color:var(--red);font-weight:500}
+  /* la ficha de quien ha entrado, en Inicio */
+  .miCuenta{display:flex;align-items:center;gap:13px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);padding:14px 15px;box-shadow:var(--sh)}
+  .miCuenta .ava{width:42px;height:42px;border-radius:50%;background:var(--panel3);color:var(--accent);
+    display:flex;align-items:center;justify-content:center;font-family:var(--f-disp);font-size:18px;
+    font-weight:600;flex:none;border:1px solid var(--line2)}
+  .miCuenta .mcN{flex:1;min-width:0}
+  .miCuenta .mcN b{display:block;font-size:15px;font-weight:500}
+  .miCuenta .mcN span{display:block;font-size:11.5px;color:var(--faint);margin-top:3px}
+
   /* Si el móvil tiene activado "reducir movimiento" (por mareos o vértigo):
      se quitan los desplazamientos, pero NO todo. Las cosas siguen apareciendo
      y apagándose con suavidad, que ayuda a entender qué ha cambiado. */
@@ -545,12 +599,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <button class="btn btn-manual" onclick="restoreData()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V10m0 0-4 4m4-4 4 4"/><path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/></svg> Restaurar copia</button>
     </div>
 
-    <!-- Vaciar la app. Va al final del todo, con el color de lo que borra y
-         separado de lo demás, para que nadie lo pulse de paso. -->
-    <div class="section-title">Vaciar la app</div>
-    <div class="hint">Borra <b>todo</b> lo que hay dentro y deja la app como recién instalada, lista para tus datos de verdad. Guarda una copia antes si tienes algo que quieras conservar.</div>
-    <div class="actions">
-      <button class="btn btn-vaciar" onclick="empezarDeCero()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v2"/><path d="M6.5 7.5 7.4 19a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9l.9-11.5"/><path d="M10.5 11v6M13.5 11v6"/></svg> Empezar de cero</button>
+    <div class="section-title">Mi cuenta</div>
+    <div class="miCuenta">
+      <div class="ava" id="miInicial">·</div>
+      <div class="mcN"><b id="miNombre">—</b><span>Tus datos están cifrados en este dispositivo</span></div>
+      <button class="btn-export" style="flex:none" onclick="bloquear()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
+        Bloquear
+      </button>
+    </div>
+    <div class="actions" style="margin-top:11px">
+      <button class="btn btn-vaciar" onclick="borrarCuenta()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v2"/><path d="M6.5 7.5 7.4 19a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9l.9-11.5"/><path d="M10.5 11v6M13.5 11v6"/></svg> Borrar mi cuenta de este dispositivo</button>
     </div>
   </div>
 
@@ -709,6 +768,10 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   </button>
 </div>
 
+<!-- PUERTA: lo primero que se ve. Hasta que no se entra con el código, los
+     datos ni siquiera están descifrados en memoria. -->
+<div class="gate" id="gate"><div class="gateBox" id="gateBox"></div></div>
+
 <!-- MODAL -->
 <div class="modal-bg" id="modalBg"><div class="modal" id="modalBox"></div></div>
 
@@ -725,7 +788,9 @@ const DEFAULT_CATS=[
   {id:'c5',name:'Mantenimiento',color:'#ef4444'},
   {id:'c6',name:'Otro',color:'#64748b'},
 ];
-let state=load();
+/* Arranca vacío. Los datos de verdad no se cargan hasta que alguien entra con
+   su código: hasta entonces ni siquiera están descifrados. */
+let state=vacio();
 
 /* El almacenamiento del navegador NO siempre está disponible: en modo
    incógnito, con las cookies bloqueadas o si la página se ve dentro de otra,
@@ -735,9 +800,16 @@ function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; 
 function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
 
-function load(){
+function vacio(){
+  return {
+    accounts:[{id:uid(),name:'Efectivo',type:'cash',opening:0,lastUpdated:Date.now()}],
+    incomes:[], expenses:[], categories:JSON.parse(JSON.stringify(DEFAULT_CATS)), projections:[], transfers:[]
+  };
+}
+/* deja unos datos recién descifrados en condiciones (copias viejas, listas que
+   faltan, metas de antes de los planes de cuotas) */
+function normaliza(s){
   try{
-    const s=JSON.parse(lsGet(KEY));
     if(s&&Array.isArray(s.accounts)){
       /* una copia vieja o a medias puede no traer todas las listas
          (las copias de antes de los traspasos no traen 'transfers') */
@@ -757,13 +829,56 @@ function load(){
       return s;
     }
   }catch(e){}
-  return {
-    accounts:[{id:uid(),name:'Efectivo',type:'cash',opening:0,lastUpdated:Date.now()}],
-    incomes:[], expenses:[], categories:JSON.parse(JSON.stringify(DEFAULT_CATS)), projections:[], transfers:[]
-  };
+  return null;
 }
-function save(){ lsSet(KEY,JSON.stringify(state)); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* ============ CIFRADO ============
+   Todo lo que se guarda en este dispositivo va cifrado con el código de quien
+   entró. La clave se saca del código con PBKDF2 (250.000 vueltas, para que
+   probar códigos a lo bruto salga carísimo) y se cifra con AES-GCM, que además
+   detecta si alguien ha tocado el archivo.
+   El código NO se guarda en ninguna parte, ni siquiera resumido: si el
+   descifrado sale bien, es que el código era el bueno.
+   ⚠️ Por eso mismo, un código olvidado es un dato perdido. No hay puerta de
+   atrás, y eso es lo que hace que esto sirva de algo. */
+const CUENTA='misFinanzas_cuenta';       /* nombre + sal. Nunca el código */
+const DATOS='misFinanzas_datos';         /* el bulto cifrado */
+const VUELTAS=250000;
+let CLAVE=null;                          /* CryptoKey, solo en memoria */
+let USUARIO=null;
+
+const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b)));
+const deB64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const bytes=n=>crypto.getRandomValues(new Uint8Array(n));
+
+async function derivaClave(codigo,sal,vueltas){
+  const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(codigo),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2',salt:sal,iterations:vueltas||VUELTAS,hash:'SHA-256'},
+    base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function cifra(texto,clave){
+  const iv=bytes(12);
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},clave,new TextEncoder().encode(texto));
+  return JSON.stringify({v:1,iv:b64(iv),ct:b64(ct)});
+}
+async function descifra(paquete,clave){
+  const p=JSON.parse(paquete);
+  const txt=await crypto.subtle.decrypt({name:'AES-GCM',iv:deB64(p.iv)},clave,deB64(p.ct));
+  return new TextDecoder().decode(txt);
+}
+
+/* Guardar es asíncrono (cifrar lleva su tiempo) pero se llama desde muchos
+   sitios como si no lo fuera: se encadenan las escrituras para que nunca se
+   pisen entre ellas. */
+let _cola=Promise.resolve();
+function save(){
+  if(!CLAVE) return;                     /* nadie ha entrado: no hay nada que guardar */
+  const copia=JSON.stringify(state);
+  _cola=_cola.then(()=>cifra(copia,CLAVE)).then(p=>lsSet(DATOS,p))
+             .catch(e=>console.error('no se pudo guardar',e));
+}
 
 /* ============ HELPERS ============ */
 function money(n){
@@ -2286,29 +2401,10 @@ function delPlan(id){
     ()=>{ state.projections=state.projections.filter(x=>x.id!==id); renderAll(); showView('planes'); });
 }
 
-/* ============ BORRAR MOVIMIENTO ============ */
-/* Los datos de ejemplo se quitaron el 2026-08-08: servían para enseñar la app
-   funcionando, pero en una app que ya se usa de verdad el botón solo era un
-   riesgo de borrarlo todo sin querer. En su lugar está "Empezar de cero". */
-
-/* Vaciar la app y dejarla como recién instalada. Se dice EXACTAMENTE qué se
-   pierde, porque no hay vuelta atrás sin una copia. */
-function empezarDeCero(){
-  const n=state.expenses.length+state.incomes.length+state.transfers.length;
-  askConfirm('Empezar de cero',
-    `Vas a borrar <b>${n} movimiento${n===1?'':'s'}</b>, <b>${state.accounts.length} cuenta${state.accounts.length===1?'':'s'}</b> y <b>${state.projections.length} plan${state.projections.length===1?'':'es'} de ahorro</b>. La app se quedará como recién instalada.<br><br><b>Esto no se puede deshacer.</b> Si hay algo que quieras conservar, cancela y guarda antes una copia.`,
-    'Borrarlo todo',
-    ()=>{
-      state={
-        accounts:[{id:uid(),name:'Efectivo',type:'cash',opening:0,lastUpdated:Date.now()}],
-        incomes:[], expenses:[], categories:JSON.parse(JSON.stringify(DEFAULT_CATS)),
-        projections:[], transfers:[]
-      };
-      _barsAnim=true; save(); renderAll(); showView('resumen');
-      avisa('Todo listo','La app está vacía y esperando tu primer apunte. Empieza por <b>Disponible</b> para poner el dinero que tienes ahora en cada cuenta.');
-    });
-}
-
+/* ============ BORRAR MOVIMIENTO ============
+   Los datos de ejemplo se quitaron el 2026-08-08: cada persona se instala la
+   app, se la encuentra vacía y la llena con lo suyo. Vaciarla del todo se hace
+   desde "Mi cuenta", en Inicio. */
 function delItem(type,id){
   const it=state[type].find(x=>x.id===id);
   const qué = type==='expenses' ? 'gasto' : 'ingreso';
@@ -2547,18 +2643,28 @@ async function exportExcel(){
 }
 document.getElementById('btnExport').addEventListener('click',exportReport);
 
-/* ============ COPIA DE SEGURIDAD ============ */
+/* ============ COPIA DE SEGURIDAD ============
+   El archivo que se descarga va CIFRADO con el mismo código con el que entras.
+   Si alguien lo encuentra en las descargas del móvil, no ve más que ruido. */
+const LISTAS=['accounts','incomes','expenses','categories','projections','transfers'];
 function backupData(){
-  try{
-    const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  if(!CLAVE) return;
+  const cuenta=JSON.parse(lsGet(CUENTA)||'{}');
+  cifra(JSON.stringify(state),CLAVE).then(paquete=>{
+    const p=JSON.parse(paquete);
+    const archivo={app:'Mis Finanzas',v:1,cifrado:'AES-GCM/PBKDF2',
+      nombre:cuenta.nombre||'',fecha:todayISO(),
+      sal:cuenta.sal,vueltas:cuenta.vueltas||VUELTAS,iv:p.iv,ct:p.ct};
+    const blob=new Blob([JSON.stringify(archivo,null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url; a.download='finanzas-copia-'+todayISO()+'.json';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1500);
-  }catch(e){ avisa('No se pudo guardar la copia','Vuelve a intentarlo. Si sigue sin funcionar, mira que al navegador le quede sitio para descargar archivos.'); }
+    avisa('Copia guardada','Está en las descargas de tu dispositivo, <b>cifrada con tu código</b>. Guárdala donde quieras: sin el código no se puede abrir, ni siquiera por ti.');
+  }).catch(()=>avisa('No se pudo guardar la copia','Vuelve a intentarlo. Si sigue sin funcionar, mira que al navegador le quede sitio para descargar archivos.'));
 }
-const LISTAS=['accounts','incomes','expenses','categories','projections','transfers'];
+
 function restoreData(){
   const inp=document.createElement('input');
   inp.type='file'; inp.accept='application/json,.json'; inp.style.display='none';
@@ -2569,37 +2675,183 @@ function restoreData(){
     r.onload=()=>{
       inp.remove();
       let d;
-      try{
-        d=JSON.parse(r.result);
-        if(!d||!Array.isArray(d.accounts)) throw 0;
-        /* Los identificadores acaban dentro de los botones de la lista. Una
-           copia manipulada podría colar ahí código, así que sólo se aceptan
-           letras, números, guión y guión bajo, que es lo que genera la app. */
-        const idsOk=LISTAS.every(k=>!Array.isArray(d[k])||d[k].every(o=>o&&typeof o.id==='string'&&/^[\w-]+$/.test(o.id)));
-        if(!idsOk) throw 0;
-      }catch(e){ avisa('Ese archivo no vale','No es una copia de seguridad de esta app. Busca uno que se llame <b>finanzas-copia-…json</b>.'); return; }
-      /* Aviso propio, no el del navegador: el del navegador se puede quedar
-         bloqueado y entonces la restauración se cancelaba sin decir nada. */
-      askConfirm('Restaurar copia',
-        'Vas a <b>sustituir todo lo que tienes ahora</b> en la app por lo que hay en esa copia. No se puede deshacer.',
-        'Restaurar', ()=>{
-          state=Object.assign({accounts:[],incomes:[],expenses:[],categories:[],projections:[],transfers:[]},d);
-          LISTAS.forEach(k=>{ if(!Array.isArray(state[k])) state[k]=[]; });
-          if(!state.categories.length) state.categories=JSON.parse(JSON.stringify(DEFAULT_CATS));
-          save(); renderAll();
-          avisa('Copia restaurada','Ya tienes de vuelta tus '+state.expenses.length+' gastos y '+state.incomes.length+' ingresos.');
-        });
+      try{ d=JSON.parse(r.result); }catch(e){ d=null; }
+      if(!d||!d.ct||!d.sal){
+        avisa('Ese archivo no vale','No es una copia de esta app. Busca uno que se llame <b>finanzas-copia-…json</b>.');
+        return;
+      }
+      pideCodigoCopia(d);
     };
     r.readAsText(f);
   };
   document.body.appendChild(inp); inp.click();
+}
+/* La copia está cifrada, así que hay que pedir el código con el que se hizo:
+   puede ser el de otro dispositivo o uno anterior. */
+function pideCodigoCopia(d){
+  openModal(`<h2>Abrir la copia</h2>
+    <div class="hint">Esta copia está cifrada${d.nombre?' y es de <b>'+esc(d.nombre)+'</b>':''}${d.fecha?', del '+esc(d.fecha):''}. Escribe el código con el que se guardó.</div>
+    <div class="fld"><label>Código</label><input id="rCod" type="password" inputmode="numeric" autocomplete="off" placeholder="······"></div>
+    <div class="modal-btns"><button class="cancel" onclick="closeModal()">Cancelar</button>
+    <button class="save" onclick="abreCopia()">Abrir</button></div>`);
+  _copia=d;
+  setTimeout(()=>{ const c=document.getElementById('rCod'); if(c) c.focus(); },60);
+}
+let _copia=null;
+async function abreCopia(){
+  const cod=(document.getElementById('rCod')||{}).value||'';
+  if(cod.length<4) return fallo('Escribe el código de esa copia.');
+  let datos;
+  try{
+    const clave=await derivaClave(cod,deB64(_copia.sal),_copia.vueltas||VUELTAS);
+    const txt=await descifra(JSON.stringify({iv:_copia.iv,ct:_copia.ct}),clave);
+    datos=normaliza(JSON.parse(txt));
+    if(!datos) throw 0;
+    /* Los identificadores acaban dentro de los botones de la lista. Una copia
+       manipulada podría colar ahí código, así que sólo se aceptan letras,
+       números, guión y guión bajo, que es lo que genera la app. */
+    const idsOk=LISTAS.every(k=>!Array.isArray(datos[k])||datos[k].every(o=>o&&typeof o.id==='string'&&/^[\w-]+$/.test(o.id)));
+    if(!idsOk) throw 0;
+  }catch(e){ return fallo('Ese código no abre esta copia.'); }
+  askConfirm('Restaurar copia',
+    `Vas a <b>sustituir todo lo que tienes ahora</b> por lo que hay en esa copia: ${datos.expenses.length} gastos y ${datos.incomes.length} ingresos. No se puede deshacer.`,
+    'Restaurar', ()=>{
+      state=datos; save(); renderAll();
+      avisa('Copia restaurada','Ya tienes de vuelta tus '+state.expenses.length+' gastos y '+state.incomes.length+' ingresos.');
+    });
+}
+
+/* ============ LA PUERTA: registro y entrada ============
+   Cada dispositivo lleva UNA cuenta. Quien se instale la app se la encuentra
+   vacía, pone su nombre y su código, y a partir de ahí es suya: no comparte
+   nada con nadie, igual que cualquier app normal. */
+const LARGO_COD=6;
+let _g={paso:'nombre',nombre:'',pin:'',pin1:'',err:''};
+
+function gateHTML(){
+  const dots=n=>`<div class="pinDots${_g.err?' mal':''}">${
+    Array.from({length:LARGO_COD},(_,i)=>`<i class="${i<n.length?'on':''}"></i>`).join('')}</div>`;
+  const teclado=`<div class="teclado">${
+    [1,2,3,4,5,6,7,8,9].map(n=>`<button onclick="tecla('${n}')">${n}</button>`).join('')}
+    <button class="hueco"></button>
+    <button onclick="tecla('0')">0</button>
+    <button class="borra" onclick="tecla('b')" aria-label="Borrar">
+      <svg viewBox="0 0 24 24"><path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7z"/><path d="M12.5 10.5 17 15M17 10.5l-4.5 4.5"/></svg>
+    </button></div>`;
+
+  if(_g.paso==='nombre') return `
+    <div class="gateLogo">Mis Finanzas</div>
+    <div class="gateSub">Esta app es <b>solo tuya</b> y vive en este dispositivo. Nadie más ve lo que apuntas aquí.</div>
+    <div class="gateFld"><label>¿Cómo te llamas?</label>
+      <input id="gNombre" maxlength="24" autocomplete="off" placeholder="Tu nombre" value="${esc(_g.nombre)}"></div>
+    <div class="gateErr">${_g.err}</div>
+    <div class="actions"><button class="btn btn-add" onclick="gateNombre()">Continuar</button></div>`;
+
+  if(_g.paso==='crear1') return `
+    <div class="gateLogo">Hola, ${esc(_g.nombre)}</div>
+    <div class="gateSub">Elige un código de <b>${LARGO_COD} números</b>. Con él se cifra todo lo que apuntes.</div>
+    ${dots(_g.pin)}${teclado}
+    <div class="gateErr">${_g.err}</div>`;
+
+  if(_g.paso==='crear2') return `
+    <div class="gateLogo">Otra vez</div>
+    <div class="gateSub">Repite el código para asegurarnos de que no hay ningún dedazo.</div>
+    ${dots(_g.pin)}${teclado}
+    <div class="gateErr">${_g.err}</div>
+    <button class="gateLink" onclick="_g.paso='crear1';_g.pin='';_g.pin1='';_g.err='';pintaGate()">Empezar de nuevo</button>`;
+
+  return `
+    <div class="gateLogo">Hola, ${esc(_g.nombre)}</div>
+    <div class="gateSub">Escribe tu código para abrir tus datos.</div>
+    ${dots(_g.pin)}${teclado}
+    <div class="gateErr">${_g.err}</div>`;
+}
+function pintaGate(){
+  document.getElementById('gateBox').innerHTML=gateHTML();
+  const n=document.getElementById('gNombre');
+  if(n){ n.focus(); n.onkeydown=e=>{ if(e.key==='Enter') gateNombre(); }; }
+}
+function gateNombre(){
+  const v=(document.getElementById('gNombre').value||'').trim();
+  if(v.length<2){ _g.err='Escribe tu nombre para empezar.'; return pintaGate(); }
+  _g.nombre=v; _g.err=''; _g.paso='crear1'; _g.pin=''; pintaGate();
+}
+function tecla(t){
+  if(_g.err){ _g.err=''; }
+  if(t==='b') _g.pin=_g.pin.slice(0,-1);
+  else if(_g.pin.length<LARGO_COD) _g.pin+=t;
+  pintaGate();
+  if(_g.pin.length===LARGO_COD) setTimeout(codigoCompleto,140);
+}
+async function codigoCompleto(){
+  if(_g.paso==='crear1'){
+    _g.pin1=_g.pin; _g.pin=''; _g.paso='crear2'; return pintaGate();
+  }
+  if(_g.paso==='crear2'){
+    if(_g.pin!==_g.pin1){
+      _g.err='No coinciden. Vuelve a elegir uno.'; _g.pin=''; _g.pin1=''; _g.paso='crear1';
+      return pintaGate();
+    }
+    return crearCuenta(_g.pin);
+  }
+  return entrar(_g.pin);
+}
+async function crearCuenta(codigo){
+  const sal=bytes(16);
+  CLAVE=await derivaClave(codigo,sal,VUELTAS);
+  USUARIO={nombre:_g.nombre};
+  lsSet(CUENTA,JSON.stringify({nombre:_g.nombre,sal:b64(sal),vueltas:VUELTAS,creado:Date.now()}));
+  lsDel('misFinanzas_beta');            /* los datos sin cifrar de la versión de pruebas */
+  lsDel('misFinanzas_demoYa'); lsDel('misFinanzas_vaciada');
+  state=vacio(); save(); abreApp();
+  avisa('Ya está, '+esc(_g.nombre),'Tu app está lista y vacía. Empieza por <b>Disponible</b>, arriba a la derecha, para decirle cuánto dinero tienes ahora en cada cuenta.<br><br><b>Apúntate el código donde no se pierda.</b> Sin él no se puede abrir lo que guardes, ni siquiera desde aquí.');
+}
+async function entrar(codigo){
+  const c=JSON.parse(lsGet(CUENTA)||'{}');
+  try{
+    const clave=await derivaClave(codigo,deB64(c.sal),c.vueltas||VUELTAS);
+    const guardado=lsGet(DATOS);
+    if(guardado){
+      const txt=await descifra(guardado,clave);   /* si el código no vale, esto falla */
+      state=normaliza(JSON.parse(txt))||vacio();
+    }else state=vacio();
+    CLAVE=clave; USUARIO={nombre:c.nombre};
+    _g.pin=''; _g.err=''; abreApp();
+  }catch(e){
+    _g.err='Ese código no es. Inténtalo otra vez.'; _g.pin=''; pintaGate();
+  }
+}
+function abreApp(){
+  document.getElementById('gate').hidden=true;
+  const ini=document.getElementById('miInicial'), nom=document.getElementById('miNombre');
+  if(ini) ini.textContent=(USUARIO.nombre||'?').trim().charAt(0).toUpperCase();
+  if(nom) nom.textContent=USUARIO.nombre||'';
+  _barsAnim=true; renderAll(); showView('resumen');
+}
+/* Bloquear: la clave se borra de memoria y los datos vuelven a ser ruido. */
+function bloquear(){
+  CLAVE=null; state=vacio(); renderAll();
+  const c=JSON.parse(lsGet(CUENTA)||'{}');
+  _g={paso:'entrar',nombre:c.nombre||'',pin:'',pin1:'',err:''};
+  document.getElementById('gate').hidden=false; pintaGate();
+}
+function borrarCuenta(){
+  askConfirm('Borrar mi cuenta',
+    'Vas a borrar de este dispositivo <b>tu cuenta y todos tus datos</b>. La app volverá a estar como recién instalada.<br><br><b>Esto no se puede deshacer.</b> Si quieres conservar algo, cancela y guarda antes una copia.',
+    'Borrarlo todo',
+    ()=>{ lsDel(CUENTA); lsDel(DATOS); CLAVE=null; location.reload(); });
 }
 
 /* ============ SERVICE WORKER (para instalar como app) ============ */
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 
 /* ============ INICIO ============ */
-renderAll();
+(function arranca(){
+  const c=lsGet(CUENTA);
+  if(c){ const j=JSON.parse(c); _g={paso:'entrar',nombre:j.nombre||'',pin:'',pin1:'',err:''}; }
+  else   { _g={paso:'nombre',nombre:'',pin:'',pin1:'',err:''}; }
+  pintaGate();
+})();
 </script>
 </body>
 </html>
