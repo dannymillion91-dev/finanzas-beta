@@ -43,6 +43,7 @@
     --on-red:#1E0309;
     --amber:#FFD84F;
     --blue:#56E1FF;
+    --gold:#FFCE45;        /* solo para "volver": ver .backBtn */
 
     --radius:16px;
     --r-ctl:12px;
@@ -345,10 +346,18 @@
   .row.tapRow:active{background:var(--panel3)}
 
   /* cabeceras de pantalla */
-  .backBtn{background:none;border:none;color:var(--muted);font-size:13px;font-weight:500;
-    padding:0 0 16px;font-family:inherit;display:inline-flex;align-items:center;gap:6px;
-    transition:color .15s}
-  .backBtn:hover{color:var(--accent)}
+  /* Volver es la salida de cada pantalla y antes era un texto gris que no se
+     veía. Va en dorado, con su recuadro: es el ÚNICO sitio donde se usa este
+     color, así que el ojo aprende enseguida que dorado = salir de aquí. */
+  .backBtn{background:rgba(255,206,69,.08);border:1px solid rgba(255,206,69,.36);
+    color:var(--gold);font-size:13px;font-weight:500;font-family:inherit;
+    padding:10px 16px 10px 13px;border-radius:999px;margin-bottom:20px;
+    display:inline-flex;align-items:center;gap:8px;
+    box-shadow:0 1px 16px -8px var(--gold);
+    transition:background .15s,border-color .15s,transform .12s var(--ease-out)}
+  .backBtn:hover{background:rgba(255,206,69,.16);border-color:var(--gold)}
+  .backBtn:active{transform:scale(.96)}
+  .backBtn svg{width:14px;height:14px;stroke-width:2.1}
   .histHead{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;
     margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid var(--line)}
   .histHead .hhT{font-family:var(--f-disp);font-size:27px;font-weight:600;letter-spacing:-.035em;line-height:1.05}
@@ -607,9 +616,6 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
         Bloquear
       </button>
-    </div>
-    <div class="actions" style="margin-top:11px">
-      <button class="btn btn-vaciar" onclick="borrarCuenta()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v2"/><path d="M6.5 7.5 7.4 19a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9l.9-11.5"/><path d="M10.5 11v6M13.5 11v6"/></svg> Borrar mi cuenta de este dispositivo</button>
     </div>
   </div>
 
@@ -2576,7 +2582,7 @@ function periodoInforme(){
   const f=[...state.incomes,...state.expenses].map(m=>m.date).filter(Boolean).sort();
   if(!f.length) return 'sin movimientos';
   const bonito=iso=>new Date(iso+'T00:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});
-  return f[0]===f[f.length-1] ? bonito(f[0]) : bonito(f[0])+' — '+bonito(f[f.length-1]);
+  return f[0]===f[f.length-1] ? bonito(f[0]) : 'del '+bonito(f[0])+' al '+bonito(f[f.length-1]);
 }
 async function exportPDF(){
   if(!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
@@ -2764,7 +2770,18 @@ function gateHTML(){
     <div class="gateLogo">Hola, ${esc(_g.nombre)}</div>
     <div class="gateSub">Escribe tu código para abrir tus datos.</div>
     ${dots(_g.pin)}${teclado}
-    <div class="gateErr">${_g.err}</div>`;
+    <div class="gateErr">${_g.err}</div>
+    <button class="gateLink" onclick="olvideCodigo()">No me acuerdo de mi código</button>`;
+}
+/* La única salida si alguien pierde su código. Vive AQUÍ, en la pantalla de
+   entrada, y no dentro de la app: ahí solo era un botón de borrarlo todo
+   esperando un dedazo. */
+function olvideCodigo(){
+  _g.err=''; pintaGate();
+  openModal(`<h2>No hay forma de recuperarlo</h2>
+    <div class="hint">Tus datos están cifrados con tu código y <b>el código no se guarda en ningún sitio</b>. Eso es lo que impide que nadie más los abra, pero también significa que <b>sin él no hay manera de recuperarlos</b>, ni desde aquí ni desde ninguna parte.<br><br>Si tienes una <b>copia de seguridad</b> y recuerdas el código con el que la hiciste, empieza de cero y restáurala después.</div>
+    <div class="modal-btns"><button class="cancel" onclick="closeModal()">Seguir intentándolo</button>
+    <button class="danger" style="margin-right:0" onclick="closeModal();borrarCuenta()">Empezar de cero</button></div>`);
 }
 function pintaGate(){
   document.getElementById('gateBox').innerHTML=gateHTML();
