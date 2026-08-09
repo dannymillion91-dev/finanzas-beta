@@ -185,9 +185,23 @@
   .card.expense{border-color:rgba(255,78,118,.3);box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.05),0 0 30px -20px var(--red)}
   .card.expense .val,.card.expense .cIco svg{color:var(--red);stroke:var(--red)}
   .card.expense .cIco{background:rgba(255,78,118,.1)}
-  .card.net{border-color:var(--line2)}
-  .card.net .val{color:var(--txt);font-size:34px}
-  .card.net .cIco svg{color:var(--muted);stroke:var(--muted)}
+  /* Disponible es LA cifra, así que lleva el dorado. El blanco la dejaba al
+     mismo nivel que cualquier otro texto. */
+  .card.net{border-color:rgba(255,206,69,.32);
+    box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.05),0 0 34px -22px var(--gold)}
+  .card.net .val{color:var(--gold);font-size:34px;text-shadow:0 0 26px rgba(255,206,69,.28)}
+  .card.net .cIco{background:rgba(255,206,69,.11)}
+  .card.net .cIco svg{color:var(--gold);stroke:var(--gold)}
+  /* el desglose de cuentas dentro de la tarjeta */
+  .mini{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);
+    display:flex;flex-direction:column;gap:8px}
+  .mini .mi{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:12.5px}
+  .mini .mi span{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mini .mi b{font-family:var(--f-disp);font-weight:600;color:var(--txt);letter-spacing:-.02em;
+    white-space:nowrap;font-size:13.5px}
+  .mini .mi b.neg{color:var(--red)}
+  .mini .mas{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gold);font-weight:500}
+  .mini .mas i{letter-spacing:.14em;font-style:normal}
   @media(max-width:400px){ .card .val{font-size:22px} .card.net .val{font-size:29px}
     .card{padding:13px 13px 14px} .card .cIco{width:26px;height:26px;right:11px;top:11px} }
 
@@ -339,6 +353,10 @@
     transition:background .18s var(--ease-out),color .18s}
   .seg:hover{color:var(--txt)}
   .seg.active{background:var(--panel);color:var(--txt);box-shadow:var(--sh)}
+
+  .version{text-align:center;font-size:11px;color:var(--faint);margin-top:20px;
+    padding-top:16px;border-top:1px solid var(--line);letter-spacing:.02em}
+  .version b{color:var(--muted);font-weight:500}
 
   /* fila de ajuste: icono, qué es, qué hace y la flecha */
   .opt{display:flex;align-items:center;gap:13px;padding:14px 15px;width:100%;
@@ -551,9 +569,15 @@
   .bTab.active{background:rgba(255,255,255,.13);color:var(--chart-txt);box-shadow:0 1px 2px rgba(0,0,0,.5)}
   .barsWrap{margin-top:4px}
   .barsSvg{width:100%;display:block;overflow:visible}
+  /* ⚠️ La animación de entrada de las barras NO se hace con CSS.
+     Con `animation: ... both` desde scaleY(.03), si la animación no llega a
+     ejecutarse (pestaña en segundo plano, móvil ahorrando batería, la página
+     sin pintar) las barras se quedan clavadas al 3% de su altura y parece que
+     ese dato no existe. En un gráfico la altura ES el dato: nunca puede
+     depender de que una animación termine.
+     Ahora se anima desde JS sin dejar rastro (fill:'none'), así que el estado
+     de reposo es SIEMPRE la altura de verdad. */
   .bBar{transform-box:fill-box;transform-origin:bottom}
-  .bBar.up{animation:barUp .3s var(--ease-out) both}
-  @keyframes barUp{from{transform:scaleY(.03);opacity:0}to{transform:scaleY(1);opacity:1}}
   .bHit{fill:transparent;cursor:pointer}
   .bSel{fill:rgba(255,255,255,.045)}
   .bgLine{stroke:rgba(255,255,255,.07);stroke-width:1}
@@ -698,6 +722,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <span class="cIco"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="13" rx="2.6"/><path d="M2.5 10.5h19"/><circle cx="17.5" cy="15" r="1.3"/></svg></span>
         <div class="lbl">Disponible</div><div class="val" id="sumNet">€0</div>
         <div class="delta" id="dNet"></div>
+        <!-- las cuentas, aquí mismo: de nada sirve un total si no sabes de
+             dónde sale. Cinco como mucho; si hay más, se dice cuántas. -->
+        <div class="mini" id="miniCuentas"></div>
       </div>
     </div>
 
@@ -776,6 +803,11 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </div>
 
     <div class="hint" style="margin-top:22px">Todo lo que apuntas se guarda <b>cifrado dentro de este dispositivo</b> y no viaja a ningún servidor. Ni siquiera desde aquí se puede abrir sin tu código: apúntalo donde no se pierda.</div>
+
+    <!-- El número de versión sirve para saber si el móvil está enseñando la
+         última o una copia guardada de antes. Sin esto, cada arreglo es una
+         adivinanza. -->
+    <div class="version" id="verApp"></div>
   </div>
 
   <!-- MIS CUENTAS (pantalla entera; se llega tocando "Disponible" en Inicio).
@@ -1010,6 +1042,10 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
    descifrado sale bien, es que el código era el bueno.
    ⚠️ Por eso mismo, un código olvidado es un dato perdido. No hay puerta de
    atrás, y eso es lo que hace que esto sirva de algo. */
+/* Se sube a mano en cada publicación. Sirve para saber de un vistazo si el
+   móvil está enseñando la última versión o una copia guardada de antes. */
+const VERSION='9';
+const VERSION_FECHA='9 de agosto de 2026';
 const CUENTA='misFinanzas_cuenta';       /* nombre + sal. Nunca el código */
 const DATOS='misFinanzas_datos';         /* el bulto cifrado */
 const VUELTAS=250000;
@@ -1163,6 +1199,19 @@ function pintaDeltas(){
     pon(id, (sube?FLECHA.sube:FLECHA.baja)+`<b>${Math.abs(pct)}% ${sube?'más':'menos'}</b><span>que el mes pasado</span>`,
         bien?'bien':'mal');
   };
+  /* las cuentas dentro de la tarjeta de Disponible: hasta 5, y si hay más se
+     dice cuántas con los tres puntos, que es lo que invita a tocar */
+  const mini=document.getElementById('miniCuentas');
+  if(mini){
+    const cs=state.accounts.slice(0,5);
+    const resto=state.accounts.length-cs.length;
+    mini.innerHTML = state.accounts.length
+      ? cs.map(a=>{const b=acctBalance(a.id);
+          return `<div class="mi"><span>${esc(a.name)}</span><b class="${b<0?'neg':''}">${money(b)}</b></div>`;
+        }).join('')
+        + (resto>0?`<div class="mas">y ${resto} cuenta${resto===1?'':'s'} más <i>···</i></div>`:'')
+      : '';
+  }
   comp('dIn', mesDe(state.incomes,0),  mesDe(state.incomes,1),  true);
   comp('dEx', mesDe(state.expenses,0), mesDe(state.expenses,1), false);
   /* en Disponible lo que interesa no es un porcentaje, sino si este mes has
@@ -1771,6 +1820,7 @@ function renderBars(){
     <div class="bDet">${chip}</div>
     <div class="barsMsg">${msg}</div>
   </div>`;
+  animaBarras();
   _barsAnim=false;   /* ya subieron; los siguientes redibujados son sin animación */
 }
 
@@ -1800,8 +1850,7 @@ function _barsSVG(periodos,tope,prom,eur0){
          ingreso pequeño al lado de un gasto grande. Altura mínima visible, y
          el radio nunca mayor que la mitad de lo que mide. */
       const h=Math.max(8,base-yDe(v)), y=base-h, r=Math.min(5,bw/2.2,h/2);
-      const sube=_barsAnim?` up" style="animation-delay:${i*45}ms`:'';
-      const b=`<rect class="bBar${sube}" x="${bx.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${r.toFixed(1)}" fill="url(#bg_${k})"/>`;
+      const b=`<rect class="bBar" x="${bx.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${r.toFixed(1)}" fill="url(#bg_${k})"/>`;
       if(k==='ing') bIng+=b; else bGas+=b;
       if(verVal) vals+=`<text class="bVal ${k}" x="${(bx+bw/2).toFixed(1)}" y="${(y-6).toFixed(1)}">${eur0(v)}</text>`;
     });
@@ -1831,6 +1880,22 @@ function _barsSVG(periodos,tope,prom,eur0){
   <div class="bLeg"><span><i style="background:${BCOL.ing[0]}"></i>Ingresos</span><span><i style="background:${BCOL.gas[0]}"></i>Gastos</span></div>`;
 }
 function barsPick(i){ _barsSel = (_barsSel===i) ? -1 : i; renderBars(); }
+/* Las barras suben al entrar, pero sin dejar rastro: si la animación no llega
+   a ejecutarse, se quedan a su altura de verdad, que es lo único que importa. */
+function animaBarras(){
+  if(!_barsAnim) return;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.querySelectorAll('.barsSvg .bBar').forEach(b=>{
+    try{
+      const a=b.animate([{transform:'scaleY(.04)',opacity:.2},{transform:'none',opacity:1}],
+        {duration:340,easing:'cubic-bezier(.23,1,.32,1)',fill:'none'});
+      /* Seguro: si el navegador congela la animación (pestaña de fondo, móvil
+         ahorrando batería), a los 1,2 s se cancela y la barra vuelve sola a su
+         altura de verdad. Un gráfico no puede depender de una animación. */
+      setTimeout(()=>{ try{ a.cancel(); }catch(e){} },1200);
+    }catch(e){}
+  });
+}
 
 function donutPick(i){
   const det=document.getElementById('pieDetail'), wrap=document.getElementById('pieWrap');
@@ -3102,6 +3167,8 @@ function pintaMiCuenta(){
   if(hd)  hd.textContent=n.split(' ')[0]||'Mi cuenta';
   const c=JSON.parse(lsGet(CUENTA)||'{}');
   if(desde&&c.creado) desde.textContent='Usando la app desde el '+new Date(c.creado).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});
+  const v=document.getElementById('verApp');
+  if(v) v.innerHTML=`Mis Finanzas · versión <b>${VERSION}</b> · ${VERSION_FECHA}`;
 }
 /* ---- personalización ---- */
 const TEMA='misFinanzas_tema';
