@@ -2,7 +2,7 @@
    Estrategia "red primero": si hay internet, siempre trae la versión más nueva;
    si no hay internet, usa la copia guardada. Así las mejoras llegan enseguida
    y la app sigue abriendo sin conexión. */
-const CACHE = 'finanzas-beta-v2';
+const CACHE = 'mis-finanzas-v3';
 const ASSETS = ['./', 'index.html', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', e => {

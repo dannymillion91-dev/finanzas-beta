@@ -1,13 +1,13 @@
 {
-  "name": "Mis Finanzas (Beta)",
-  "short_name": "Finanzas Beta",
-  "description": "Gestión de ingresos, gastos y metas de ahorro",
+  "name": "Mis Finanzas",
+  "short_name": "Mis Finanzas",
+  "description": "Tus ingresos, gastos y planes de ahorro, cifrados en tu dispositivo",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0b1120",
-  "theme_color": "#0f766e",
+  "background_color": "#050506",
+  "theme_color": "#050506",
   "icons": [
     {
       "src": "icon.svg",
