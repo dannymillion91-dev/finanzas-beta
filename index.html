@@ -328,6 +328,18 @@
     border-bottom:1px solid var(--line)}
   .mesTot span:last-child{font-family:var(--f-disp);font-size:12.5px;letter-spacing:0;color:var(--muted)}
 
+  /* Selector de dos opciones para la app (el tema). Tiene sus propios colores
+     y NO reutiliza los del selector de los gráficos: aquellos están pensados
+     para vivir sobre negro, y aquí el fondo cambia con el tema. Reutilizarlos
+     dejaba el texto "Claro" en blanco sobre blanco, es decir, invisible. */
+  .segm{display:flex;gap:4px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:13px;padding:4px}
+  .seg{flex:1;padding:12px 4px;border-radius:9px;background:transparent;border:none;
+    color:var(--muted);font-family:inherit;font-size:13.5px;font-weight:500;
+    transition:background .18s var(--ease-out),color .18s}
+  .seg:hover{color:var(--txt)}
+  .seg.active{background:var(--panel);color:var(--txt);box-shadow:var(--sh)}
+
   /* fila de ajuste: icono, qué es, qué hace y la flecha */
   .opt{display:flex;align-items:center;gap:13px;padding:14px 15px;width:100%;
     border:none;border-bottom:1px solid var(--line);background:none;font-family:inherit;
@@ -725,9 +737,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </div>
 
     <div class="section-title">Cómo se ve la app</div>
-    <div class="bTabs" role="group" aria-label="Tema">
-      <button class="bTab" id="temaOscuro" onclick="aplicaTema('oscuro')">Oscuro</button>
-      <button class="bTab" id="temaClaro" onclick="aplicaTema('claro')">Claro</button>
+    <div class="segm" role="group" aria-label="Tema">
+      <button class="seg" id="temaOscuro" onclick="aplicaTema('oscuro')">Oscuro</button>
+      <button class="seg" id="temaClaro" onclick="aplicaTema('claro')">Claro</button>
     </div>
 
     <div class="section-title">Seguridad</div>
@@ -1783,7 +1795,11 @@ function _barsSVG(periodos,tope,prom,eur0){
     fondo+=`<rect class="bHit" x="${xs}" y="${top-16}" width="${slot}" height="${base-top+34}" onclick="barsPick(${i})"/>`;
     [['ing',s.ing,x],['gas',s.gas,x+bw+4]].forEach(([k,v,bx])=>{
       if(v<=0) return;
-      const y=yDe(v), h=Math.max(3,base-y), r=Math.min(5,bw/2.2);
+      /* Una barra de 3px con 5px de redondeo DESAPARECE: el radio se come la
+         barra entera y parece que ese dato no existe. Pasó de verdad con un
+         ingreso pequeño al lado de un gasto grande. Altura mínima visible, y
+         el radio nunca mayor que la mitad de lo que mide. */
+      const h=Math.max(8,base-yDe(v)), y=base-h, r=Math.min(5,bw/2.2,h/2);
       const sube=_barsAnim?` up" style="animation-delay:${i*45}ms`:'';
       const b=`<rect class="bBar${sube}" x="${bx.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${r.toFixed(1)}" fill="url(#bg_${k})"/>`;
       if(k==='ing') bIng+=b; else bGas+=b;
