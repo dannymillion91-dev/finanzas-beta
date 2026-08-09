@@ -197,7 +197,7 @@
     display:flex;flex-direction:column;gap:8px}
   .mini .mi{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:12.5px}
   .mini .mi span{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .mini .mi b{font-family:var(--f-disp);font-weight:600;color:var(--txt);letter-spacing:-.02em;
+  .mini .mi b{font-family:var(--f-disp);font-weight:600;color:var(--gold);letter-spacing:-.02em;
     white-space:nowrap;font-size:13.5px}
   .mini .mi b.neg{color:var(--red)}
   .mini .mas{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gold);font-weight:500}
@@ -284,6 +284,10 @@
   .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}
   .row .amt{font-family:var(--f-disp);font-weight:600;font-size:15.5px;flex-shrink:0;white-space:nowrap;letter-spacing:-.02em}
   .amt.pos{color:var(--green)} .amt.neg{color:var(--red)}
+  /* el dinero que HAY en una cuenta va en dorado, igual que el Disponible:
+     es lo mismo mirado de cerca. En rojo solo si la cuenta está en números
+     rojos, que ahí lo que importa es el aviso. */
+  .amt.saldo{color:var(--gold)} .amt.saldo.neg{color:var(--red)}
   .row .del{background:none;color:var(--muted);padding:4px;font-size:18px;line-height:1;flex-shrink:0}
   .empty{padding:32px 18px;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.65}
   .empty b{color:var(--txt);font-weight:500}
@@ -819,7 +823,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <div class="hhT">Tu dinero</div>
         <div class="hhS" id="ctSub">—</div>
       </div>
-      <div class="hhV" style="color:var(--accent)" id="ctTot">€0</div>
+      <div class="hhV" style="color:var(--gold)" id="ctTot">€0</div>
     </div>
     <div id="ctBody"></div>
   </div>
@@ -1043,7 +1047,7 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
    atrás, y eso es lo que hace que esto sirva de algo. */
 /* Se sube a mano en cada publicación. Sirve para saber de un vistazo si el
    móvil está enseñando la última versión o una copia guardada de antes. */
-const VERSION='9';
+const VERSION='10';
 const VERSION_FECHA='9 de agosto de 2026';
 const CUENTA='misFinanzas_cuenta';       /* nombre + sal. Nunca el código */
 const DATOS='misFinanzas_datos';         /* el bulto cifrado */
@@ -1243,7 +1247,7 @@ function renderCuentas(){
         <div class="concept">${esc(a.name)}</div>
         <div class="meta">${meta}</div>
       </div>
-      <div class="amt ${b<0?'neg':''}">${money(b)}</div>
+      <div class="amt saldo ${b<0?'neg':''}">${money(b)}</div>
       <span class="chev">›</span>
     </div>`;
   }).join('') || '<div class="empty">Todavía no tienes ninguna cuenta.<br>Toca <b>+ Añadir cuenta</b> para crear la primera.</div>';
@@ -1275,7 +1279,7 @@ function renderCuentas(){
     ${ahorrado>0?'<div class="fichaPie">Lo apartado para ahorrar no se ha gastado: sigue siendo tuyo, pero guardado en tus planes.</div>':''}` : '';
   const sub=document.getElementById('ctSub'), tot=document.getElementById('ctTot');
   if(sub) sub.textContent = state.accounts.length ? 'En total, en '+cuentas : 'Todavía sin cuentas';
-  if(tot){ tot.textContent=money(total); tot.style.color = total<0 ? 'var(--red)' : 'var(--accent)'; }
+  if(tot){ tot.textContent=money(total); tot.style.color = total<0 ? 'var(--red)' : 'var(--gold)'; }
   el.innerHTML=`<div class="table">${filas}</div>
     <div class="actions" style="margin-top:12px">
       <button class="btn btn-add" onclick="openAccount()">+ Añadir cuenta</button>
