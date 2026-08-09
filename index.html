@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -45,6 +45,16 @@
     --blue:#56E1FF;
     --gold:#FFCE45;        /* solo para "volver": ver .backBtn */
 
+    /* Los colores de DENTRO de los gráficos no cambian con el tema: las dos
+       tarjetas de gráficos son negras siempre, también en la versión clara,
+       porque el neón sólo es neón sobre negro. */
+    --chart-bg:#000;
+    --chart-ing:#4FF5A7;
+    --chart-gas:#56E1FF;
+    --chart-txt:#F4F5F7;
+    --chart-mute:#7B8291;
+    --chart-line:rgba(255,255,255,.07);
+
     --radius:16px;
     --r-ctl:12px;
 
@@ -57,6 +67,35 @@
 
     /* profundidad de verdad: contacto + caída, no un halo de color */
     --sh:0 1px 2px rgba(0,0,0,.7), 0 14px 34px -20px rgba(0,0,0,1);
+  }
+  /* ===== VERSIÓN CLARA =====
+     Mismo diseño, mismas medidas, misma luz: sólo se dan la vuelta los papeles.
+     El blanco es el de la hoja (#FFF para las tarjetas, un gris casi blanco de
+     fondo) y los acentos se oscurecen lo justo para que se lean sobre blanco:
+     un menta neón sobre papel no se ve, y un rosa fosforito tampoco. */
+  :root[data-tema="claro"]{
+    --bg:#F4F6F8;
+    --panel:#FFFFFF;
+    --panel2:#F1F3F6;
+    --panel3:#E6E9EE;
+    --line:rgba(11,13,18,.09);
+    --line2:rgba(11,13,18,.17);
+
+    --txt:#0B0D12;
+    --muted:#565E6F;
+    --faint:#6B7382;
+
+    --accent:#00A362;
+    --accent2:#00794A;
+    --on-accent:#FFFFFF;
+    --green:#00A362;
+    --red:#D81B4E;
+    --on-red:#FFFFFF;
+    --amber:#B07A00;
+    --blue:#0A7FA8;
+    --gold:#9A6B00;
+
+    --sh:0 1px 2px rgba(11,13,18,.06), 0 12px 28px -18px rgba(11,13,18,.35);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
@@ -106,22 +145,46 @@
   .btn-export:active{transform:scale(.97)}
   .wrap{padding:18px;max-width:900px;margin:0 auto}
 
-  /* Las tres cifras de cabecera. Son lo primero que se mira, así que van
-     grandes, en la tipografía de display y apretadas. */
-  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-bottom:22px;
-    background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
-  .card{background:var(--panel);padding:15px 13px 16px;position:relative}
-  .card.tap{cursor:pointer;transition:background .15s}
+  /* Las tres cifras de cabecera: cada una en su tarjeta, con su color en el
+     borde y un resplandor muy justo, como los paneles de un cuadro de mandos.
+     "Disponible" ocupa la fila entera porque es LA cifra: lo que puedes
+     gastar hoy. Debajo de cada número, cómo va el mes contra el anterior. */
+  .summary{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:22px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:15px 15px 16px;position:relative;overflow:hidden;
+    box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.045)}
+  .card.net{grid-column:1 / -1}
+  .card.tap{cursor:pointer;transition:transform .12s var(--ease-out),border-color .18s,background .15s}
   .card.tap:hover{background:var(--panel2)}
-  .card.tap:active{background:var(--panel3)}
+  .card.tap:active{transform:scale(.985)}
+  /* el icono, arriba a la derecha, apagado: acompaña, no compite */
+  .card .cIco{position:absolute;right:13px;top:13px;width:30px;height:30px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.045)}
+  .card .cIco svg{width:15px;height:15px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .card .lbl{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.13em;
     font-weight:500;display:flex;align-items:center;gap:4px}
-  .card .val{font-family:var(--f-disp);font-size:26px;font-weight:600;margin-top:9px;letter-spacing:-.035em;line-height:1}
-  .card.income .val{color:var(--green)}
-  .card.expense .val{color:var(--red)}
-  .card.net .val{color:var(--txt)}
-  @media(max-width:520px){ .card .val{font-size:19px} .card{padding:13px 11px 14px} }
-  @media(max-width:360px){ .card .val{font-size:16px} }
+  .card .val{font-family:var(--f-disp);font-size:26px;font-weight:600;margin-top:10px;
+    letter-spacing:-.035em;line-height:1}
+  .card .delta{font-size:11px;font-weight:500;color:var(--faint);margin-top:9px;
+    display:flex;align-items:center;gap:5px;min-height:14px}
+  .card .delta svg{width:11px;height:11px;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  .card .delta b{font-weight:500}
+  /* el color no lo pone la dirección, sino si es buena noticia: gastar menos
+     baja, y baja en verde */
+  .card .delta.bien b,.card .delta.bien svg{color:var(--green);stroke:var(--green)}
+  .card .delta.mal b,.card .delta.mal svg{color:var(--red);stroke:var(--red)}
+  /* cada tarjeta lleva su luz en el borde */
+  .card.income{border-color:rgba(79,245,167,.3);box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.05),0 0 30px -20px var(--green)}
+  .card.income .val,.card.income .cIco svg{color:var(--green);stroke:var(--green)}
+  .card.income .cIco{background:rgba(79,245,167,.1)}
+  .card.expense{border-color:rgba(255,78,118,.3);box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.05),0 0 30px -20px var(--red)}
+  .card.expense .val,.card.expense .cIco svg{color:var(--red);stroke:var(--red)}
+  .card.expense .cIco{background:rgba(255,78,118,.1)}
+  .card.net{border-color:var(--line2)}
+  .card.net .val{color:var(--txt);font-size:34px}
+  .card.net .cIco svg{color:var(--muted);stroke:var(--muted)}
+  @media(max-width:400px){ .card .val{font-size:22px} .card.net .val{font-size:29px}
+    .card{padding:13px 13px 14px} .card .cIco{width:26px;height:26px;right:11px;top:11px} }
 
   /* Tabs */
   .tabs{
@@ -260,6 +323,38 @@
     border-bottom:1px solid var(--line)}
   .mesTot span:last-child{font-family:var(--f-disp);font-size:12.5px;letter-spacing:0;color:var(--muted)}
 
+  /* fila de ajuste: icono, qué es, qué hace y la flecha */
+  .opt{display:flex;align-items:center;gap:13px;padding:14px 15px;width:100%;
+    border:none;border-bottom:1px solid var(--line);background:none;font-family:inherit;
+    text-align:left;cursor:pointer;transition:background .14s}
+  .opt:last-child{border-bottom:none}
+  .opt:hover{background:var(--panel2)}
+  .opt:active{background:var(--panel3)}
+  .opt .oIco{width:36px;height:36px;border-radius:11px;background:var(--panel2);
+    border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex:none}
+  .opt .oIco svg{width:17px;height:17px;stroke:var(--accent);fill:none;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round}
+  .opt .oT{flex:1;min-width:0}
+  .opt .oT b{display:block;font-size:14.5px;font-weight:500;color:var(--txt)}
+  .opt .oT span{display:block;font-size:12px;color:var(--faint);margin-top:3px;font-weight:400}
+
+  /* pasar de una tanda de cuotas a otra */
+  .pagCuotas{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--panel2);border:1px solid var(--line);border-radius:999px;
+    padding:5px 6px;margin-bottom:12px}
+  .pagCuotas span{flex:1;text-align:center;font-size:12.5px;font-weight:500;color:var(--txt);
+    letter-spacing:-.005em}
+  .pagCuotas button{width:36px;height:36px;border-radius:50%;background:var(--panel);
+    border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+    color:var(--txt);flex:none;transition:background .14s,opacity .14s}
+  .pagCuotas button svg{width:16px;height:16px}
+  .pagCuotas button:hover{background:var(--panel3)}
+  .pagCuotas button:disabled{opacity:.28;pointer-events:none}
+  .verTodo{width:100%;margin-top:12px;background:transparent;border:1px dashed var(--line2);
+    color:var(--muted);border-radius:var(--r-ctl);padding:12px;font-family:inherit;
+    font-size:13px;font-weight:500;transition:color .15s,border-color .15s}
+  .verTodo:hover{color:var(--accent);border-color:var(--accent)}
+
   /* el rayo: aparece, brilla y se va */
   .chispa{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);z-index:200;
     display:flex;flex-direction:column;align-items:center;gap:12px;pointer-events:none;
@@ -396,11 +491,11 @@
 
   /* ===== Gráfico circular (pastel) =====
      fondo negro a propósito: el neón sólo se ve neón sobre negro */
-  .pieCard{background:#000;border:1px solid var(--line);border-radius:var(--radius);
+  .pieCard{background:var(--chart-bg);border:1px solid var(--chart-line);border-radius:var(--radius);
     padding:20px 15px 16px;margin-bottom:6px;box-shadow:var(--sh)}
   .pieHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
-  .pieHead .ph1{font-size:10.5px;color:var(--faint);font-weight:500;text-transform:uppercase;letter-spacing:.15em}
-  .pieHead .ph2{font-family:var(--f-disp);font-size:20px;font-weight:600;letter-spacing:-.03em}
+  .pieHead .ph1{font-size:10.5px;color:var(--chart-mute);font-weight:500;text-transform:uppercase;letter-spacing:.15em}
+  .pieHead .ph2{color:var(--chart-txt);font-family:var(--f-disp);font-size:20px;font-weight:600;letter-spacing:-.03em}
   /* cuanto más grande, mejor se aprecian los degradados y el filo de luz */
   .pieWrap{width:100%;max-width:440px;margin:0 auto}
   .pieWrap svg{width:100%;display:block;overflow:visible}
@@ -413,30 +508,30 @@
     text-anchor:middle;paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:2.6px;letter-spacing:-.02em}
   .plabel.big{font-size:18px;letter-spacing:-.04em;stroke-width:3px}
   .plabel.out{font-size:11px;stroke-width:2px;stroke:#000}
-  .plead{stroke:var(--faint);stroke-width:1;opacity:.75;pointer-events:none}
+  .plead{stroke:var(--chart-mute);stroke-width:1;opacity:.75;pointer-events:none}
   .pieDetail{display:flex;align-items:center;justify-content:center;min-height:36px;margin-top:14px}
-  .pieDetail .pd{background:var(--panel2);border:1px solid var(--line);border-radius:99px;
+  .pieDetail .pd{background:rgba(255,255,255,.07);color:var(--chart-txt);border:1px solid var(--chart-line);border-radius:99px;
     padding:7px 15px;display:flex;gap:9px;align-items:center;font-size:13.5px;font-weight:500}
-  .pieDetail .pdHint{font-size:12px;color:var(--faint)}
+  .pieDetail .pdHint{font-size:12px;color:var(--chart-mute)}
   /* Dos columnas y sin el %: el porcentaje ya está escrito en el pastel,
      repetirlo aquí sólo alargaba la lista. */
   .legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 10px;margin-top:16px;
-    padding-top:14px;border-top:1px solid var(--line)}
+    padding-top:14px;border-top:1px solid var(--chart-line)}
   .lg{display:flex;align-items:center;gap:8px;font-size:12px;padding:7px 5px;cursor:pointer;
     border-radius:9px;transition:background .14s}
-  .lg:hover{background:var(--panel2)}
+  .lg{color:var(--chart-txt)}.lg:hover{background:rgba(255,255,255,.06)}
   .lg .ln{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
-  .lg .lv{color:var(--muted);font-weight:500;font-size:11.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .lg .lv{color:var(--chart-mute);font-weight:500;font-size:11.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
 
   /* ===== Gráfico de barras (tendencia) ===== */
-  .barsCard{background:#000;border:1px solid var(--line);border-radius:var(--radius);
+  .barsCard{background:var(--chart-bg);border:1px solid var(--chart-line);border-radius:var(--radius);
     padding:18px 15px 14px;margin-bottom:6px;box-shadow:var(--sh)}
-  .bTabs{display:flex;gap:4px;margin-bottom:18px;background:var(--panel2);border:1px solid var(--line);
+  .bTabs{display:flex;gap:4px;margin-bottom:18px;background:rgba(255,255,255,.05);border:1px solid var(--chart-line);
     border-radius:12px;padding:4px}
-  .bTab{flex:1;padding:11px 4px;min-height:40px;border-radius:9px;background:transparent;border:none;color:var(--muted);
+  .bTab{flex:1;padding:11px 4px;min-height:40px;border-radius:9px;background:transparent;border:none;color:var(--chart-mute);
     font-size:12px;font-weight:500;letter-spacing:-.005em;transition:background .18s var(--ease-out),color .18s}
-  .bTab:hover{color:var(--txt)}
-  .bTab.active{background:var(--panel3);color:var(--txt);box-shadow:0 1px 2px rgba(0,0,0,.5)}
+  .bTab:hover{color:var(--chart-txt)}
+  .bTab.active{background:rgba(255,255,255,.13);color:var(--chart-txt);box-shadow:0 1px 2px rgba(0,0,0,.5)}
   .barsWrap{margin-top:4px}
   .barsSvg{width:100%;display:block;overflow:visible}
   .bBar{transform-box:fill-box;transform-origin:bottom}
@@ -445,28 +540,28 @@
   .bHit{fill:transparent;cursor:pointer}
   .bSel{fill:rgba(255,255,255,.045)}
   .bgLine{stroke:rgba(255,255,255,.07);stroke-width:1}
-  .bgTxt{font-size:9.5px;fill:var(--faint);font-weight:500;font-variant-numeric:tabular-nums}
+  .bgTxt{font-size:9.5px;fill:var(--chart-mute);font-weight:500;font-variant-numeric:tabular-nums}
   .bAvgLine{stroke:rgba(255,255,255,.28);stroke-width:1.2;stroke-dasharray:4 4}
-  .bAvgTxt{font-size:9.5px;fill:var(--faint);font-weight:500}
+  .bAvgTxt{font-size:9.5px;fill:var(--chart-mute);font-weight:500}
   .bVal{font-family:var(--f-disp);font-size:9.5px;font-weight:600;text-anchor:middle;letter-spacing:-.02em}
   .bVal.ing{fill:#9BFFCF}
   .bVal.gas{fill:#A7EEFF}
-  .bLbl{font-size:10px;fill:var(--faint);font-weight:500;text-anchor:middle}
-  .bLbl.now{fill:var(--txt);font-weight:700}
+  .bLbl{font-size:10px;fill:var(--chart-mute);font-weight:500;text-anchor:middle}
+  .bLbl.now{fill:var(--chart-txt);font-weight:700}
   .bLeg{display:flex;justify-content:center;gap:20px;margin-top:12px;font-size:11.5px;
-    color:var(--faint);font-weight:500}
+    color:var(--chart-mute);font-weight:500}
   .bLeg span{display:flex;align-items:center;gap:7px}
   .bLeg i{width:8px;height:8px;border-radius:50%}
   .bDet{display:flex;align-items:center;justify-content:center;min-height:34px;margin-top:10px}
-  .bDet .bdHint{font-size:12px;color:var(--faint)}
-  .bDet .bd{background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:7px 15px;
+  .bDet .bdHint{font-size:12px;color:var(--chart-mute)}
+  .bDet .bd{background:rgba(255,255,255,.07);color:var(--chart-txt);border:1px solid var(--chart-line);border-radius:99px;padding:7px 15px;
     display:flex;gap:11px;align-items:center;font-size:13px;font-weight:500}
-  .bDet .bd .i{color:var(--green)}
-  .bDet .bd .g{color:var(--blue)}
-  .barsMsg{text-align:center;font-size:12.5px;color:var(--muted);margin-top:14px;padding-top:12px;
-    border-top:1px solid var(--line);line-height:1.55;display:flex;align-items:center;
+  .bDet .bd .i{color:var(--chart-ing)}
+  .bDet .bd .g{color:var(--chart-gas)}
+  .barsMsg{text-align:center;font-size:12.5px;color:var(--chart-mute);margin-top:14px;padding-top:12px;
+    border-top:1px solid var(--chart-line);line-height:1.55;display:flex;align-items:center;
     justify-content:center;gap:8px;flex-wrap:wrap}
-  .barsMsg b{color:var(--txt);font-weight:500}
+  .barsMsg b{color:var(--chart-txt);font-weight:500}
   .barsMsg svg{width:15px;height:15px;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
   /* ===== Puerta: registro y entrada con código ===== */
@@ -561,9 +656,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <h1>Mis Finanzas <span style="font-size:10px;font-weight:700;background:var(--amber);color:#3a2500;padding:2px 6px;border-radius:6px;vertical-align:middle;letter-spacing:.5px">BETA</span></h1>
     <div class="sub" id="periodLbl">—</div>
   </div>
-  <button class="btn-export" id="btnExport">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
-    Informe
+  <button class="btn-export" onclick="showView('cuenta')" aria-label="Mi cuenta">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg>
+    <span id="hdNombre">Mi cuenta</span>
   </button>
 </div>
 
@@ -572,9 +667,21 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   <!-- INICIO / RESUMEN -->
   <div class="view active" id="view-resumen">
     <div class="summary">
-      <div class="card income tap" onclick="showView('ingresos')"><div class="lbl">Ingresos</div><div class="val" id="sumIn">€0</div></div>
-      <div class="card expense tap" onclick="showView('gastos')"><div class="lbl">Gastos</div><div class="val" id="sumEx">€0</div></div>
-      <div class="card net tap" onclick="showView('cuentas')"><div class="lbl">Disponible</div><div class="val" id="sumNet">€0</div></div>
+      <div class="card income tap" onclick="showView('ingresos')">
+        <span class="cIco"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+        <div class="lbl">Ingresos</div><div class="val" id="sumIn">€0</div>
+        <div class="delta" id="dIn"></div>
+      </div>
+      <div class="card expense tap" onclick="showView('gastos')">
+        <span class="cIco"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span>
+        <div class="lbl">Gastos</div><div class="val" id="sumEx">€0</div>
+        <div class="delta" id="dEx"></div>
+      </div>
+      <div class="card net tap" onclick="showView('cuentas')">
+        <span class="cIco"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="13" rx="2.6"/><path d="M2.5 10.5h19"/><circle cx="17.5" cy="15" r="1.3"/></svg></span>
+        <div class="lbl">Disponible</div><div class="val" id="sumNet">€0</div>
+        <div class="delta" id="dNet"></div>
+      </div>
     </div>
 
 
@@ -601,22 +708,57 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
          pantalla que se abre al tocar "Disponible" (view-cuentas), con todo
          lo que se puede hacer con ellos. -->
 
-    <div class="section-title">Copia de seguridad</div>
-    <div class="hint">Guarda TODOS tus datos en un archivo dentro de tu dispositivo. Si cambias de teléfono o pasa algo, podrás restaurarlos aquí.</div>
-    <div class="actions">
-      <button class="btn btn-add" onclick="backupData()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg> Guardar copia</button>
-      <button class="btn btn-manual" onclick="restoreData()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V10m0 0-4 4m4-4 4 4"/><path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/></svg> Restaurar copia</button>
+  </div>
+
+  <!-- MI CUENTA: todo lo personal en un sitio. Ajustes, seguridad y datos ya
+       no andan sueltos por la pantalla principal. -->
+  <div class="view" id="view-cuenta">
+    <div class="miCuenta" style="margin-bottom:6px">
+      <div class="ava" id="miInicial">·</div>
+      <div class="mcN"><b id="miNombre">—</b><span id="miDesde">Tus datos están cifrados en este dispositivo</span></div>
+      <button class="btn-export" style="flex:none" onclick="cambiarNombre()">Editar</button>
     </div>
 
-    <div class="section-title">Mi cuenta</div>
-    <div class="miCuenta">
-      <div class="ava" id="miInicial">·</div>
-      <div class="mcN"><b id="miNombre">—</b><span>Tus datos están cifrados en este dispositivo</span></div>
-      <button class="btn-export" style="flex:none" onclick="bloquear()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
-        Bloquear
+    <div class="section-title">Cómo se ve la app</div>
+    <div class="bTabs" role="group" aria-label="Tema">
+      <button class="bTab" id="temaOscuro" onclick="aplicaTema('oscuro')">Oscuro</button>
+      <button class="bTab" id="temaClaro" onclick="aplicaTema('claro')">Claro</button>
+    </div>
+
+    <div class="section-title">Seguridad</div>
+    <div class="table">
+      <button class="opt" onclick="cambiarCodigo()">
+        <span class="oIco"><svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/><circle cx="12" cy="15.5" r="1.2"/></svg></span>
+        <span class="oT"><b>Cambiar mi código</b><span>El de 6 números con el que entras</span></span>
+        <span class="chev">›</span>
+      </button>
+      <button class="opt" onclick="bloquear()">
+        <span class="oIco"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l-5-5 5-5M5 12h11"/></svg></span>
+        <span class="oT"><b>Bloquear la app</b><span>Vuelve a pedir el código</span></span>
+        <span class="chev">›</span>
       </button>
     </div>
+
+    <div class="section-title">Tus datos</div>
+    <div class="table">
+      <button class="opt" onclick="exportReport()">
+        <span class="oIco"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 17h6"/></svg></span>
+        <span class="oT"><b>Descargar informe</b><span>Todos tus movimientos en PDF o Excel</span></span>
+        <span class="chev">›</span>
+      </button>
+      <button class="opt" onclick="backupData()">
+        <span class="oIco"><svg viewBox="0 0 24 24"><path d="M12 3v11m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
+        <span class="oT"><b>Guardar una copia</b><span>Un archivo cifrado, por si cambias de móvil</span></span>
+        <span class="chev">›</span>
+      </button>
+      <button class="opt" onclick="restoreData()">
+        <span class="oIco"><svg viewBox="0 0 24 24"><path d="M12 21V10m0 0-4 4m4-4 4 4"/><path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/></svg></span>
+        <span class="oT"><b>Restaurar una copia</b><span>Sustituye lo de ahora por lo de la copia</span></span>
+        <span class="chev">›</span>
+      </button>
+    </div>
+
+    <div class="hint" style="margin-top:22px">Todo lo que apuntas se guarda <b>cifrado dentro de este dispositivo</b> y no viaja a ningún servidor. Ni siquiera desde aquí se puede abrir sin tu código: apúntalo donde no se pierda.</div>
   </div>
 
   <!-- MIS CUENTAS (pantalla entera; se llega tocando "Disponible" en Inicio).
@@ -771,6 +913,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   </button>
   <button class="tab" data-view="planes" onclick="showView('planes',this)">
     <svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.5"/></svg>Planes
+  </button>
+  <button class="tab" data-view="cuenta" onclick="showView('cuenta',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg>Mi cuenta
   </button>
 </div>
 
@@ -955,6 +1100,7 @@ function renderAll(){
   document.getElementById('sumNet').textContent=money(dineroTotal());
   document.getElementById('totalIn').textContent=money(ti);
   document.getElementById('totalEx').textContent=money(te);
+  pintaDeltas();
   /* Antes ponía "Agosto de 2026" encima de unos totales que NO son de agosto,
      sino de todo lo apuntado: parecía que los números eran solo del mes. */
   document.getElementById('periodLbl').textContent=
@@ -963,6 +1109,7 @@ function renderAll(){
   if(document.getElementById('view-historial').classList.contains('active')) renderHistory();
   if(document.getElementById('view-plan').classList.contains('active')) renderPlan();
   if(document.getElementById('view-movimientos').classList.contains('active')) renderMovimientos();
+  pintaMiCuenta();
   save();
 }
 
@@ -974,6 +1121,41 @@ function dineroTotal(){ return state.accounts.reduce((s,a)=>s+acctBalance(a.id),
    verlas, crearlas, editarlas, borrarlas y pasar dinero de una a otra.
    Como es una pantalla, al guardar algo desde una ficha se cierra la ficha y
    esta pantalla se vuelve a pintar sola: no se pierde de vista el total. */
+/* Debajo de cada cifra, cómo va el mes contra el anterior. Un número solo no
+   dice nada; lo que dice algo es si va mejor o peor que el mes pasado. */
+function mesDe(lista,atras){
+  const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-atras);
+  const k=isoDate(d).slice(0,7);
+  return lista.reduce((s,m)=>(m.date&&m.date.slice(0,7)===k)?s+(Number(m.amount)||0):s,0);
+}
+const FLECHA={
+  sube:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 18 18 6M9 6h9v9"/></svg>',
+  baja:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 9v9H9"/></svg>'
+};
+function pintaDeltas(){
+  const pon=(id,html,clase)=>{ const e=document.getElementById(id); if(!e) return;
+    e.className='delta'+(clase?' '+clase:''); e.innerHTML=html; };
+  const comp=(id,ahora,antes,subirEsBueno)=>{
+    if(!antes){ pon(id, ahora?'Primer mes con datos':''); return; }
+    const pct=Math.round((ahora-antes)/antes*100);
+    if(pct===0){ pon(id,'Igual que el mes pasado'); return; }
+    const sube=pct>0;
+    /* el color dice si es buena noticia; la palabra dice qué ha pasado.
+       Un "20%" a secas no se entiende: hay que decir más o menos. */
+    const bien = subirEsBueno ? sube : !sube;
+    pon(id, (sube?FLECHA.sube:FLECHA.baja)+`<b>${Math.abs(pct)}% ${sube?'más':'menos'}</b><span>que el mes pasado</span>`,
+        bien?'bien':'mal');
+  };
+  comp('dIn', mesDe(state.incomes,0),  mesDe(state.incomes,1),  true);
+  comp('dEx', mesDe(state.expenses,0), mesDe(state.expenses,1), false);
+  /* en Disponible lo que interesa no es un porcentaje, sino si este mes has
+     acabado sumando o restando */
+  const neto=mesDe(state.incomes,0)-mesDe(state.expenses,0);
+  pon('dNet', neto===0 ? 'Este mes, ni sube ni baja'
+    : (neto>0?FLECHA.sube:FLECHA.baja)+`<b>${neto>0?'Has ahorrado':'Has gastado de más'} ${money(Math.abs(neto))}</b><span>este mes</span>`,
+    neto>0?'bien':'mal');
+}
+
 function renderCuentas(){
   const el=document.getElementById('ctBody'); if(!el) return;
   const total=dineroTotal();
@@ -2173,7 +2355,39 @@ function renderPlanes(){
 
 /* ---- un plan por dentro: la tabla que se va tachando ---- */
 let _planAbierto=null;
-function abrirPlan(id){ _planAbierto=id; showView('plan'); }
+let _planPag=null;      /* qué tanda de cuotas se está viendo (null = la de hoy) */
+let _planTodo=false;    /* o el plan entero */
+function abrirPlan(id){ _planAbierto=id; _planPag=null; _planTodo=false; showView('plan'); }
+function planMueve(n){ _planPag+=n; renderPlan(); window.scrollTo({top:0,behavior:'smooth'}); }
+function planVerTodo(){ _planTodo=!_planTodo; renderPlan(); }
+
+/* Parte las cuotas en tandas del tamaño que se puede mirar de una vez.
+   Devuelve [{clave, titulo, items:[{c,i}]}] en orden. */
+function agrupaCuotas(p){
+  const g={};
+  (p.cuotas||[]).forEach((c,i)=>{
+    const d=new Date(c.date+'T00:00:00');
+    let k;
+    if(p.freq==='dia'){                       /* el lunes de esa semana */
+      const l=new Date(d); l.setDate(d.getDate()-((d.getDay()+6)%7)); k=isoDate(l);
+    }
+    else if(p.freq==='sem') k=c.date.slice(0,7);   /* el mes */
+    else k=c.date.slice(0,4);                      /* el año */
+    (g[k]=g[k]||[]).push({c,i});
+  });
+  return Object.keys(g).sort().map(k=>{
+    let titulo;
+    if(p.freq==='dia'){
+      const l=new Date(k+'T00:00:00'), dom=new Date(l); dom.setDate(l.getDate()+6);
+      const mismoMes=l.getMonth()===dom.getMonth();
+      titulo='Del '+l.getDate()+(mismoMes?'':' de '+l.toLocaleDateString('es-ES',{month:'short'}).replace('.',''))
+            +' al '+dom.getDate()+' de '+dom.toLocaleDateString('es-ES',{month:'long'});
+    }else if(p.freq==='sem'){
+      titulo=new Date(k+'-01T00:00:00').toLocaleDateString('es-ES',{month:'long',year:'numeric'}).replace(/^./,ch=>ch.toUpperCase());
+    }else titulo='Año '+k;
+    return {clave:k,titulo,items:g[k]};
+  });
+}
 function renderPlan(){
   const el=document.getElementById('planDetalle'); if(!el) return;
   const p=planById(_planAbierto);
@@ -2182,20 +2396,24 @@ function renderPlan(){
   const llevo=planAhorrado(p), pct=planPct(p), falta=Math.max(0,(Number(p.target)||0)-llevo);
   const sig=planSiguiente(p);
   const hoy=todayISO();
-  /* cuotas agrupadas por meses con su subtotal, como en la plantilla
-     (en los planes mensuales se agrupa por año: si no, cada grupo sería
-     una sola fila y el subtotal no diría nada) */
-  const porAno = p.freq==='mes';
-  const grupos={};
-  (p.cuotas||[]).forEach((c,i)=>{
-    const k=porAno?c.date.slice(0,4):c.date.slice(0,7);
-    (grupos[k]=grupos[k]||[]).push({c,i});
-  });
-  const tabla=Object.keys(grupos).sort().map(k=>{
-    const arr=grupos[k];
+  /* Las cuotas van por tandas, no todas de golpe: un plan diario de seis meses
+     son 185 filas y bajar hasta el día de hoy es un suplicio. Se enseña SOLO
+     la tanda donde cae la cuota que toca, con flechas para moverse y un
+     "ver el plan entero" para quien quiera la tabla completa.
+       · diario  → la semana (lunes a domingo)
+       · semanal → el mes (sus 4 o 5 semanas)
+       · mensual → el año */
+  const grupos=agrupaCuotas(p);
+  /* la tanda que se enseña: la de la cuota pendiente, o la última si ya está todo */
+  if(_planPag===null){
+    const iSig=sig?sig.i:(p.cuotas||[]).length-1;
+    _planPag=Math.max(0,grupos.findIndex(g=>g.items.some(x=>x.i===iSig)));
+  }
+  _planPag=Math.min(Math.max(0,_planPag),Math.max(0,grupos.length-1));
+  const visibles=_planTodo?grupos:grupos.slice(_planPag,_planPag+1);
+  const tabla=visibles.map(g=>{
+    const arr=g.items, nom=g.titulo;
     const tot=arr.reduce((s,x)=>s+(Number(x.c.amount)||0),0);
-    const nom = porAno ? k
-      : new Date(k+'-01T00:00:00').toLocaleDateString('es-ES',{month:'long',year:'numeric'}).replace(/^./,ch=>ch.toUpperCase());
     const filas=arr.map(({c,i})=>{
       const hecha=(p.hechas||{})[i];
       const d=new Date(c.date+'T00:00:00');
@@ -2217,7 +2435,14 @@ function renderPlan(){
   }).join('');
   const aviso = sig
     ? `<div class="hint">Ahora te toca la cuota de <b>${money(sig.c.amount)}</b>${sig.c.date>hoy?` (${new Date(sig.c.date+'T00:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'long'})})`:''}. Tócala para guardarla: el dinero saldrá de la cuenta que elijas.</div>`
-    : (pct>=100?'<div class="hint"> <b>Plan completado.</b> Has reunido todo lo que te propusiste.</div>':'');
+    : (pct>=100?'<div class="hint"><b>Plan completado.</b> Has reunido todo lo que te propusiste.</div>':'');
+  /* las flechas para pasar de una tanda a otra */
+  const fl=d=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d?'M9.5 5 16 12l-6.5 7':'M14.5 5 8 12l6.5 7'}"/></svg>`;
+  const nav = (_planTodo||grupos.length<=1) ? '' : `<div class="pagCuotas">
+      <button onclick="planMueve(-1)" ${_planPag<=0?'disabled':''} aria-label="Anterior">${fl(0)}</button>
+      <span>${grupos[_planPag]?esc(grupos[_planPag].titulo):''}</span>
+      <button onclick="planMueve(1)" ${_planPag>=grupos.length-1?'disabled':''} aria-label="Siguiente">${fl(1)}</button>
+    </div>`;
   el.innerHTML=`<div class="histHead">
       <div><div class="hhT">${esc(p.title)}</div>
       <div class="hhS">${money(p.target)} para el ${p.targetDate?new Date(p.targetDate+'T00:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}):'—'}</div></div>
@@ -2229,10 +2454,14 @@ function renderPlan(){
       <div class="pf"><span>${(p.cuotas||[]).length} cuotas ${f.adj}</span><span>${Object.keys(p.hechas||{}).length} ya guardadas</span></div>
     </div>
     ${aviso}
+    ${nav}
     <div class="table" style="padding:0;overflow:hidden">${tabla||'<div class="empty">Este plan no tiene cuotas.</div>'}</div>
-    <div class="actions" style="margin-top:14px">
+    ${grupos.length>1?`<button class="verTodo" onclick="planVerTodo()">${
+      _planTodo ? 'Ver solo '+({dia:'esta semana',sem:'este mes',mes:'este año'}[p.freq])
+                : 'Ver el plan entero · '+(p.cuotas||[]).length+' cuotas'}</button>`:''}
+    <div class="actions" style="margin-top:16px">
       <button class="btn btn-manual" onclick="openPlanForm('${p.id}')">Ajustar plan</button>
-      <button class="btn btn-manual" style="color:var(--red);border-color:var(--red)" onclick="delPlan('${p.id}')">Borrar</button>
+      <button class="btn btn-manual" style="color:var(--red);border-color:rgba(255,78,118,.45)" onclick="delPlan('${p.id}')">Borrar</button>
     </div>`;
 }
 
@@ -2647,7 +2876,6 @@ async function exportExcel(){
   const period=new Date().toLocaleDateString('es-ES',{month:'long',year:'numeric'});
   XLSX.writeFile(wb,'Informe-Financiero-'+period.replace(' ','-')+'.xlsx');
 }
-document.getElementById('btnExport').addEventListener('click',exportReport);
 
 /* ============ COPIA DE SEGURIDAD ============
    El archivo que se descarga va CIFRADO con el mismo código con el que entras.
@@ -2840,10 +3068,88 @@ async function entrar(codigo){
 }
 function abreApp(){
   document.getElementById('gate').hidden=true;
-  const ini=document.getElementById('miInicial'), nom=document.getElementById('miNombre');
-  if(ini) ini.textContent=(USUARIO.nombre||'?').trim().charAt(0).toUpperCase();
-  if(nom) nom.textContent=USUARIO.nombre||'';
+  pintaMiCuenta();
   _barsAnim=true; renderAll(); showView('resumen');
+}
+function pintaMiCuenta(){
+  if(!USUARIO) return;
+  const n=(USUARIO.nombre||'').trim();
+  const ini=document.getElementById('miInicial'), nom=document.getElementById('miNombre'),
+        hd=document.getElementById('hdNombre'), desde=document.getElementById('miDesde');
+  if(ini) ini.textContent=(n||'?').charAt(0).toUpperCase();
+  if(nom) nom.textContent=n;
+  if(hd)  hd.textContent=n.split(' ')[0]||'Mi cuenta';
+  const c=JSON.parse(lsGet(CUENTA)||'{}');
+  if(desde&&c.creado) desde.textContent='Usando la app desde el '+new Date(c.creado).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});
+}
+/* ---- personalización ---- */
+const TEMA='misFinanzas_tema';
+function aplicaTema(t){
+  document.documentElement.dataset.tema=t;
+  lsSet(TEMA,t);
+  const o=document.getElementById('temaOscuro'), c=document.getElementById('temaClaro');
+  if(o) o.classList.toggle('active',t!=='claro');
+  if(c) c.classList.toggle('active',t==='claro');
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', t==='claro' ? '#F6F7F9' : '#050506');
+}
+/* ---- nombre ---- */
+function cambiarNombre(){
+  openModal(`<h2>Tu nombre</h2>
+    <div class="fld"><label>¿Cómo quieres que te llame?</label>
+      <input id="nNom" maxlength="24" value="${esc((USUARIO||{}).nombre||'')}" autocomplete="off"></div>
+    <div class="modal-btns"><button class="cancel" onclick="closeModal()">Cancelar</button>
+    <button class="save" onclick="guardaNombre()">Guardar</button></div>`);
+  setTimeout(()=>{const i=document.getElementById('nNom'); if(i){i.focus();i.select();}},60);
+}
+function guardaNombre(){
+  const v=(document.getElementById('nNom').value||'').trim();
+  if(v.length<2) return fallo('Escribe al menos dos letras.');
+  const c=JSON.parse(lsGet(CUENTA)||'{}'); c.nombre=v; lsSet(CUENTA,JSON.stringify(c));
+  USUARIO.nombre=v; pintaMiCuenta(); closeModal();
+}
+/* ---- cambiar el código ----
+   Hay que volver a cifrar TODO con la clave nueva, así que se hace en un solo
+   paso y sólo se guarda si ha salido bien. */
+function cambiarCodigo(){
+  _cc={paso:1,viejo:'',nuevo:'',rep:''};
+  pintaCambioCodigo();
+}
+let _cc=null;
+function pintaCambioCodigo(err){
+  const t=[ '', 'Escribe tu código de ahora', 'Elige el código nuevo', 'Repite el código nuevo' ][_cc.paso];
+  openModal(`<h2>Cambiar mi código</h2>
+    <div class="hint">${t}. Son ${LARGO_COD} números.</div>
+    ${err?`<div class="errMsg">${err}</div>`:''}
+    <div class="fld"><input id="ccPin" type="password" inputmode="numeric" maxlength="${LARGO_COD}"
+      autocomplete="off" placeholder="${'·'.repeat(LARGO_COD)}" style="text-align:center;letter-spacing:.5em;font-size:20px"></div>
+    <div class="modal-btns"><button class="cancel" onclick="closeModal()">Cancelar</button>
+    <button class="save" onclick="pasoCodigo()">${_cc.paso===3?'Cambiar':'Continuar'}</button></div>`);
+  setTimeout(()=>{const i=document.getElementById('ccPin'); if(i) i.focus();},60);
+}
+async function pasoCodigo(){
+  const v=(document.getElementById('ccPin')||{}).value||'';
+  if(v.length!==LARGO_COD) return fallo(`Tienen que ser ${LARGO_COD} números.`);
+  if(_cc.paso===1){
+    /* se comprueba de verdad: si el código no vale, no descifra */
+    try{
+      const c=JSON.parse(lsGet(CUENTA)||'{}');
+      const clave=await derivaClave(v,deB64(c.sal),c.vueltas||VUELTAS);
+      const g=lsGet(DATOS); if(g) await descifra(g,clave);
+    }catch(e){ return fallo('Ese no es tu código de ahora.'); }
+    _cc.viejo=v; _cc.paso=2; return pintaCambioCodigo();
+  }
+  if(_cc.paso===2){ _cc.nuevo=v; _cc.paso=3; return pintaCambioCodigo(); }
+  if(v!==_cc.nuevo){ _cc.paso=2; _cc.nuevo=''; return pintaCambioCodigo('No coinciden. Elige otra vez el código nuevo.'); }
+  /* sal nueva y a cifrar de nuevo todo lo que hay */
+  const sal=bytes(16);
+  const claveNueva=await derivaClave(_cc.nuevo,sal,VUELTAS);
+  const paquete=await cifra(JSON.stringify(state),claveNueva);
+  lsSet(DATOS,paquete);
+  const c=JSON.parse(lsGet(CUENTA)||'{}'); c.sal=b64(sal); c.vueltas=VUELTAS; lsSet(CUENTA,JSON.stringify(c));
+  CLAVE=claveNueva; _cc=null;
+  closeModal();
+  avisa('Código cambiado','A partir de ahora entras con el nuevo. <b>Las copias que guardaste antes siguen abriéndose con el código viejo</b>, así que no lo olvides del todo si quieres poder restaurarlas.');
 }
 /* Bloquear: la clave se borra de memoria y los datos vuelven a ser ruido. */
 function bloquear(){
@@ -2864,6 +3170,7 @@ if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catc
 
 /* ============ INICIO ============ */
 (function arranca(){
+  aplicaTema(lsGet(TEMA)||'oscuro');
   const c=lsGet(CUENTA);
   if(c){ const j=JSON.parse(c); _g={paso:'entrar',nombre:j.nombre||'',pin:'',pin1:'',err:''}; }
   else   { _g={paso:'nombre',nombre:'',pin:'',pin1:'',err:''}; }
