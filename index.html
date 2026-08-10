@@ -141,6 +141,13 @@
   }
   .app-header h1{font-family:var(--f-disp);font-size:21px;font-weight:600;letter-spacing:-.02em}
   .app-header .sub{font-size:11.5px;color:var(--faint);margin-top:3px;letter-spacing:.01em}
+  /* Dentro de una pantalla de segundo nivel (Gastos, Tu dinero, un plan...) la
+     cabecera se encoge: ahí el título de la pantalla ya dice dónde estás, y
+     esos 30 px se los queda el contenido. */
+  body.dentro .app-header{padding:11px 18px 10px}
+  body.dentro .app-header h1{font-size:16px}
+  body.dentro .app-header .sub{display:none}
+  body.dentro .btn-export{padding:8px 12px;min-height:36px}
   .btn-export{
     background:transparent;color:var(--txt);border:1px solid var(--line2);
     padding:10px 14px;min-height:40px;border-radius:999px;font-size:12.5px;font-weight:500;display:flex;gap:7px;align-items:center;
@@ -291,6 +298,17 @@
   .row .del{background:none;color:var(--muted);padding:4px;font-size:18px;line-height:1;flex-shrink:0}
   .empty{padding:32px 18px;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.65}
   .empty b{color:var(--txt);font-weight:500}
+  /* Pantalla vacía con cara: un hueco gris no invita a nada. Icono, una frase
+     que se lee de un vistazo y debajo la explicación. */
+  .nada{padding:34px 22px 8px;text-align:center}
+  .nada .nIco{width:54px;height:54px;margin:0 auto 18px;border-radius:17px;background:var(--panel2);
+    border:1px solid var(--line2);display:flex;align-items:center;justify-content:center}
+  .nada .nIco svg{width:26px;height:26px;fill:none;stroke:var(--accent);stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round}
+  .nada h3{font-family:var(--f-disp);font-weight:600;font-size:20px;letter-spacing:-.025em;
+    color:var(--txt);margin:0 0 9px}
+  .nada p{margin:0 auto;max-width:290px;color:var(--muted);font-size:13.5px;line-height:1.65}
+  .nada p b{color:var(--txt);font-weight:500}
 
   .total-row{display:flex;justify-content:space-between;align-items:center;padding:14px 15px;
     font-weight:500;font-size:13px;color:var(--muted)}
@@ -593,8 +611,8 @@
   .bVal.gas{fill:#A7EEFF}
   .bLbl{font-size:10px;fill:var(--chart-mute);font-weight:500;text-anchor:middle}
   .bLbl.now{fill:var(--chart-txt);font-weight:700}
-  .bLeg{display:flex;justify-content:center;gap:20px;margin-top:12px;font-size:11.5px;
-    color:var(--chart-mute);font-weight:500}
+  .bLeg{display:flex;justify-content:center;align-items:center;gap:15px;font-size:11.5px;
+    color:var(--chart-mute);font-weight:500;flex-wrap:wrap}
   .bLeg span{display:flex;align-items:center;gap:7px}
   .bLeg i{width:8px;height:8px;border-radius:50%}
   .bDet{display:flex;align-items:center;justify-content:center;min-height:34px;margin-top:10px}
@@ -929,6 +947,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <span><span class="dot" style="background:var(--green)"></span> Ingreso</span>
       <span><span class="dot" style="background:var(--red)"></span> Gasto</span>
     </div>
+    <div id="calResumen"></div>
   </div>
 
   <!-- PLANES DE AHORRO -->
@@ -1047,8 +1066,8 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
    atrás, y eso es lo que hace que esto sirva de algo. */
 /* Se sube a mano en cada publicación. Sirve para saber de un vistazo si el
    móvil está enseñando la última versión o una copia guardada de antes. */
-const VERSION='11';
-const VERSION_FECHA='9 de agosto de 2026';
+const VERSION='12';
+const VERSION_FECHA='10 de agosto de 2026';
 const CUENTA='misFinanzas_cuenta';       /* nombre + sal. Nunca el código */
 const DATOS='misFinanzas_datos';         /* el bulto cifrado */
 const VUELTAS=250000;
@@ -1134,6 +1153,7 @@ function showView(name,el){
      la de Inicio. Y si no hubiera pestaña, no se rompe. */
   let pestana = ['ingresos','gastos','historial','categorias','cuentas','movimientos'].includes(name) ? 'resumen' : name;
   if(name==='plan') pestana='planes';        /* un plan por dentro cuelga de Planes */
+  document.body.classList.toggle('dentro', pestana!==name);
   const t = el || document.querySelector('.tab[data-view='+pestana+']');
   if(t) t.classList.add('active');
   if(name==='calendario') renderCalendar();
@@ -1165,6 +1185,9 @@ function renderAll(){
   if(document.getElementById('view-historial').classList.contains('active')) renderHistory();
   if(document.getElementById('view-plan').classList.contains('active')) renderPlan();
   if(document.getElementById('view-movimientos').classList.contains('active')) renderMovimientos();
+  /* Si estás EN el calendario y corriges un movimiento desde el detalle del
+     día, los puntitos y el resumen del mes se quedaban con lo de antes. */
+  if(document.getElementById('view-calendario').classList.contains('active')) renderCalendar();
   pintaMiCuenta();
   save();
 }
@@ -1816,7 +1839,12 @@ function renderBars(){
   const chip=sel
     ? `<span class="bd"><b>${esc(sel.now&&_barsMode==='sem'?'Esta semana':sel.lbl)}</b>
         <span class="i">↑ ${money(sel.ing)}</span><span class="g">↓ ${money(sel.gas)}</span></span>`
-    : `<span class="bdHint">Toca un periodo para ver sus números</span>`;
+    /* La leyenda vivía en su propia línea debajo del gráfico, y encima de ella
+       otra línea gris con esta misma pista: tres renglones de texto flojo
+       seguidos. Van juntos, que además es cuando hacen falta: antes de tocar. */
+    : `<span class="bLeg"><span><i style="background:${BCOL.ing[0]}"></i>Ingresos</span>`
+      +`<span><i style="background:${BCOL.gas[0]}"></i>Gastos</span>`
+      +`<span class="bdHint">· toca un periodo</span></span>`;
   el.innerHTML=`<div class="barsCard">
     <div class="bTabs">${tab('dia','Días')}${tab('sem','Semanas')}${tab('mes','Meses')}</div>
     ${_barsSVG(periodos,top,prom,eur0)}
@@ -1846,6 +1874,7 @@ function _barsSVG(periodos,tope,prom,eur0){
     const xs=x0+slot*i, par=2*bw+4, x=xs+(slot-par)/2;
     if(i===_barsSel) fondo+=`<rect class="bSel" x="${xs+2}" y="${top-14}" width="${slot-4}" height="${base-top+30}" rx="10"/>`;
     fondo+=`<rect class="bHit" x="${xs}" y="${top-16}" width="${slot}" height="${base-top+34}" onclick="barsPick(${i})"/>`;
+    const pend=[];
     [['ing',s.ing,x],['gas',s.gas,x+bw+4]].forEach(([k,v,bx])=>{
       if(v<=0) return;
       /* Una barra de 3px con 5px de redondeo DESAPARECE: el radio se come la
@@ -1855,8 +1884,20 @@ function _barsSVG(periodos,tope,prom,eur0){
       const h=Math.max(8,base-yDe(v)), y=base-h, r=Math.min(5,bw/2.2,h/2);
       const b=`<rect class="bBar" x="${bx.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${r.toFixed(1)}" fill="url(#bg_${k})"/>`;
       if(k==='ing') bIng+=b; else bGas+=b;
-      if(verVal) vals+=`<text class="bVal ${k}" x="${(bx+bw/2).toFixed(1)}" y="${(y-6).toFixed(1)}">${eur0(v)}</text>`;
+      if(verVal) pend.push({k, cx:bx+bw/2, y:y-6, t:eur0(v)});
     });
+    /* Los dos números de un mismo periodo se PISAN cuando las barras miden
+       casi lo mismo: salía "€240€252" de una pieza y no se entendía nada.
+       Si se cruzan, el de la barra más baja sube una línea. */
+    if(pend.length===2){
+      const an=t=>t.length*6;                       /* ancho aproximado */
+      const [a,b]=pend;
+      if(Math.abs(a.cx-b.cx) < (an(a.t)+an(b.t))/2+4 && Math.abs(a.y-b.y)<11){
+        const bajo = a.y>=b.y ? a : b;              /* el de la barra más baja */
+        bajo.y = Math.min(a.y,b.y)-11;
+      }
+    }
+    pend.forEach(p=>{ vals+=`<text class="bVal ${p.k}" x="${p.cx.toFixed(1)}" y="${p.y.toFixed(1)}">${p.t}</text>`; });
     lbls+=`<text class="bLbl${s.now?' now':''}" x="${(xs+slot/2).toFixed(1)}" y="${lblY}">${esc(s.now&&_barsMode==='sem'?'Esta semana':s.lbl)}</text>`;
   });
   let media='';
@@ -1879,8 +1920,7 @@ function _barsSVG(periodos,tope,prom,eur0){
     ${rejilla}${fondo}
     <g filter="url(#hIng)">${bIng}</g><g filter="url(#hGas)">${bGas}</g>
     ${media}${vals}${lbls}
-  </svg></div>
-  <div class="bLeg"><span><i style="background:${BCOL.ing[0]}"></i>Ingresos</span><span><i style="background:${BCOL.gas[0]}"></i>Gastos</span></div>`;
+  </svg></div>`;
 }
 function barsPick(i){ _barsSel = (_barsSel===i) ? -1 : i; renderBars(); }
 /* Las barras suben al entrar, pero sin dejar rastro: si la animación no llega
@@ -2419,7 +2459,11 @@ function renderPlanes(){
     ? (state.projections.length===1?'1 plan en marcha':state.projections.length+' planes en marcha')
     : 'Elige para qué ahorras y la app te arma el plan';
   if(!state.projections.length){
-    el.innerHTML='<div class="empty">Todavía no tienes ningún plan.<br>Dinos <b>para qué</b> quieres ahorrar, <b>cuánto</b> y <b>para cuándo</b>, y te repartimos el esfuerzo.</div>';
+    el.innerHTML=`<div class="nada">
+      <div class="nIco"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5V1.8M12 22.2v-1.7M3.5 12H1.8M22.2 12h-1.7"/></svg></div>
+      <h3>Tu primer plan de ahorro</h3>
+      <p>Dinos <b>para qué</b> quieres ahorrar, <b>cuánto</b> y <b>para cuándo</b>. Nosotros repartimos el esfuerzo en cuotas que empiezan flojas y van subiendo.</p>
+    </div>`;
     return;
   }
   el.innerHTML=state.projections.map(p=>{
@@ -2763,6 +2807,28 @@ function renderCalendar(){
     html+=`<div class="day ${iso===tISO?'today':''}" onclick="dayDetail('${iso}')">${d}<div class="dts">${dots}</div></div>`;
   }
   document.getElementById('calGrid').innerHTML=html;
+  pintaResumenMes(y,m);
+}
+/* Debajo del calendario, cómo fue el mes que se está mirando. Antes ahí no
+   había nada y el mes entero se contaba solo con puntitos de colores. */
+function pintaResumenMes(y,m){
+  const el=document.getElementById('calResumen'); if(!el) return;
+  const delMes=l=>l.filter(x=>{const p=(x.date||'').split('-');
+    return +p[0]===y && +p[1]===m+1;}).reduce((s,x)=>s+Number(x.amount||0),0);
+  const ent=delMes(state.incomes), sal=delMes(state.expenses);
+  if(!ent && !sal){
+    el.innerHTML=`<div class="empty" style="margin-top:18px">En este mes todavía no hay nada apuntado.</div>`;
+    return;
+  }
+  const dif=ent-sal;
+  const mes=new Date(y,m,1).toLocaleDateString('es-ES',{month:'long'});
+  el.innerHTML=`<div class="impacto" style="margin-top:18px">
+    <div class="imT">Cómo fue ${mes}</div>
+    <div class="imR"><span>Entró</span><b class="up">+ ${money(ent)}</b></div>
+    <div class="imR"><span>Salió</span><b class="dn">− ${money(sal)}</b></div>
+    <div class="imR" style="border-top:1px solid var(--line);margin-top:7px;padding-top:9px">
+      <span>Diferencia</span><b class="${dif<0?'dn':'up'}">${dif<0?'− ':'+ '}${money(Math.abs(dif))}</b></div>
+  </div>`;
 }
 function dayDetail(iso){
   const ins=state.incomes.filter(i=>i.date===iso), exs=state.expenses.filter(e=>e.date===iso);
