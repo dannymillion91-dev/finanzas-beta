@@ -614,10 +614,12 @@
   .bVal{font-family:var(--f-disp);font-size:9.5px;font-weight:600;text-anchor:middle;letter-spacing:-.02em}
   .bVal.ing{fill:#9BFFCF}
   .bVal.gas{fill:#FFA8BE}
-  /* El número que va escrito DENTRO de la sub-barra: blanco con un filo negro
-     por detrás, que es lo único que se lee igual de bien sobre el verde y
-     sobre el rojo. Mismo truco que los porcentajes del pastel. */
-  .bVal.dentro{fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.5);stroke-width:2.6px}
+  /* El número que va escrito DENTRO de una barra NO cambia de color: el gasto
+     siempre en rojo y el ingreso siempre en verde, cueste lo que cueste leerlo.
+     Lo que lo hace legible sobre un fondo de su mismo color es el filo negro de
+     detrás, no cambiarle el color. (Fue blanco un rato y se perdía el sentido:
+     un número blanco no dice si entró o salió.) */
+  .bVal.dentro{paint-order:stroke;stroke:rgba(0,0,0,.72);stroke-width:3.2px}
   .bLbl{font-size:10px;fill:var(--chart-mute);font-weight:500;text-anchor:middle}
   .bLbl.now{fill:var(--chart-txt);font-weight:700}
   .bLeg{display:flex;justify-content:center;align-items:center;gap:15px;font-size:11.5px;
@@ -1084,7 +1086,7 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
    atrás, y eso es lo que hace que esto sirva de algo. */
 /* Se sube a mano en cada publicación. Sirve para saber de un vistazo si el
    móvil está enseñando la última versión o una copia guardada de antes. */
-const VERSION='14';
+const VERSION='15';
 const VERSION_FECHA='10 de agosto de 2026';
 const CUENTA='misFinanzas_cuenta';       /* nombre + sal. Nunca el código */
 const DATOS='misFinanzas_datos';         /* el bulto cifrado */
@@ -1915,8 +1917,10 @@ function _barsSVG(periodos,tope,prom,eur0){
         h=Math.min(Math.max(5,base-yDe(men)), H-3);
         /* Más estrecha que la barra que la contiene y con las esquinas RECTAS:
            así se lee como una pieza metida dentro y no como otra barra más. Con
-           el mismo ancho y las mismas esquinas redondas se confundían las dos. */
-        const sw=Math.max(5,bw*.52), sx=bx+(bw-sw)/2;
+           el mismo ancho y las mismas esquinas redondas se confundían las dos.
+           Un pelo más estrecha a cada lado basta para separarlas: al 52% que
+           tuvo un rato parecía un palito y no una capa. */
+        const sw=Math.max(5,bw-4), sx=bx+(bw-sw)/2;
         subs+=`<rect class="bBar bSub" x="${sx.toFixed(1)}" y="${(base-h).toFixed(1)}" width="${sw.toFixed(1)}" height="${h.toFixed(1)}" fill="url(#bg_${pierde})"/>`;
       }
       /* Dónde va el número del menor, por orden de preferencia:
@@ -1928,11 +1932,11 @@ function _barsSVG(periodos,tope,prom,eur0){
          del otro ("€171" sobre "€1850", ilegibles los dos). */
       if(verVal && men>0){
         if(h>=18)
-          vals+=`<text class="bVal dentro" x="${cx.toFixed(1)}" y="${(base-h+12.5).toFixed(1)}">${eur0(men)}</text>`;
+          vals+=`<text class="bVal dentro ${pierde}" x="${cx.toFixed(1)}" y="${(base-h+12.5).toFixed(1)}">${eur0(men)}</text>`;
         else if(yH-17>=top-4)
           vals+=`<text class="bVal ${pierde}" x="${cx.toFixed(1)}" y="${(yH-17).toFixed(1)}">${eur0(men)}</text>`;
         else
-          vals+=`<text class="bVal dentro" x="${cx.toFixed(1)}" y="${(yH+13).toFixed(1)}">${eur0(men)}</text>`;
+          vals+=`<text class="bVal dentro ${pierde}" x="${cx.toFixed(1)}" y="${(yH+13).toFixed(1)}">${eur0(men)}</text>`;
       }
     }
     lbls+=`<text class="bLbl${s.now?' now':''}" x="${(xs+slot/2).toFixed(1)}" y="${lblY}">${esc(s.now&&_barsMode==='sem'?'Esta semana':s.lbl)}</text>`;

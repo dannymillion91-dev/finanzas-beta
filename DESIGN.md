@@ -41,9 +41,14 @@ pero el azul no decía nada en una app donde el rosa ya significa gasto).
 
 **Una sola barra por periodo**: mide lo mayor de los dos y lleva su color; la
 sub-barra de dentro, pegada al suelo, mide lo menor y lleva el otro. El trozo
-de color que queda a la vista es la diferencia. La sub-barra es **más estrecha**
-(52% del ancho) y **sin esquinas redondas**: con el mismo ancho y el mismo
-radio, las dos piezas se confundían en una sola.
+de color que queda a la vista es la diferencia. La sub-barra va **2 px más
+estrecha por cada lado** y **sin esquinas redondas**: con el mismo ancho y el
+mismo radio las dos piezas se confundían en una sola, y al 52% parecía un palito.
+
+Los importes **nunca cambian de color**: el gasto siempre rojo y el ingreso
+siempre verde, incluso escritos encima de una barra de su mismo color. Lo que
+los hace legibles es el filo negro de detrás (`paint-order:stroke`), no pintarlos
+de blanco: un número blanco no dice si entró o salió.
 
 ## Tipografía
 
