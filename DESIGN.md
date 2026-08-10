@@ -41,7 +41,9 @@ pero el azul no decía nada en una app donde el rosa ya significa gasto).
 
 **Una sola barra por periodo**: mide lo mayor de los dos y lleva su color; la
 sub-barra de dentro, pegada al suelo, mide lo menor y lleva el otro. El trozo
-de color que queda a la vista es la diferencia.
+de color que queda a la vista es la diferencia. La sub-barra es **más estrecha**
+(52% del ancho) y **sin esquinas redondas**: con el mismo ancho y el mismo
+radio, las dos piezas se confundían en una sola.
 
 ## Tipografía
 

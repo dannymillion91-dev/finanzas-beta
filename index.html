@@ -1084,7 +1084,7 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
    atrás, y eso es lo que hace que esto sirva de algo. */
 /* Se sube a mano en cada publicación. Sirve para saber de un vistazo si el
    móvil está enseñando la última versión o una copia guardada de antes. */
-const VERSION='13';
+const VERSION='14';
 const VERSION_FECHA='10 de agosto de 2026';
 const CUENTA='misFinanzas_cuenta';       /* nombre + sal. Nunca el código */
 const DATOS='misFinanzas_datos';         /* el bulto cifrado */
@@ -1913,8 +1913,11 @@ function _barsSVG(periodos,tope,prom,eur0){
            igualados, se deja siempre un dedo del color del que gana asomando,
            que si no parece que ese periodo solo tuvo una cosa. */
         h=Math.min(Math.max(5,base-yDe(men)), H-3);
-        const rs=Math.min(5,bw/2.2,h/2);
-        subs+=`<rect class="bBar bSub" x="${bx.toFixed(1)}" y="${(base-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${rs.toFixed(1)}" fill="url(#bg_${pierde})"/>`;
+        /* Más estrecha que la barra que la contiene y con las esquinas RECTAS:
+           así se lee como una pieza metida dentro y no como otra barra más. Con
+           el mismo ancho y las mismas esquinas redondas se confundían las dos. */
+        const sw=Math.max(5,bw*.52), sx=bx+(bw-sw)/2;
+        subs+=`<rect class="bBar bSub" x="${sx.toFixed(1)}" y="${(base-h).toFixed(1)}" width="${sw.toFixed(1)}" height="${h.toFixed(1)}" fill="url(#bg_${pierde})"/>`;
       }
       /* Dónde va el número del menor, por orden de preferencia:
          1) dentro de su sub-barra, si cabe;
