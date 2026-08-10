@@ -546,6 +546,11 @@
   /* "te falta algo por rellenar", dicho DENTRO del formulario */
   .errMsg{background:rgba(255,78,118,.1);border:1px solid rgba(255,78,118,.45);color:#FFD3DD;
     border-radius:var(--r-ctl);padding:11px 13px;font-size:13px;font-weight:500;margin-bottom:15px}
+  /* Pegado DEBAJO del campo de la fecha, no arriba del formulario: el aviso
+     tiene que estar donde está el problema o no se ve. */
+  .avisoFecha{background:rgba(255,78,118,.09);border:1px solid rgba(255,78,118,.4);color:#FFD3DD;
+    border-radius:var(--r-ctl);padding:10px 12px;font-size:12.5px;line-height:1.55;margin-top:8px}
+  .avisoFecha b{color:#fff;font-weight:600}
   .hint{background:transparent;border:1px solid var(--line);
     border-radius:14px;padding:13px 14px;font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:15px}
   .hint b{color:var(--txt);font-weight:500}
@@ -1086,7 +1091,7 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
    atrás, y eso es lo que hace que esto sirva de algo. */
 /* Se sube a mano en cada publicación. Sirve para saber de un vistazo si el
    móvil está enseñando la última versión o una copia guardada de antes. */
-const VERSION='15';
+const VERSION='16';
 const VERSION_FECHA='10 de agosto de 2026';
 const CUENTA='misFinanzas_cuenta';       /* nombre + sal. Nunca el código */
 const DATOS='misFinanzas_datos';         /* el bulto cifrado */
@@ -2008,6 +2013,26 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&l
    traer cualquier cosa dentro. Se convierte a número antes de meterlo en la
    casilla: si no es un número, la casilla se queda vacía. */
 function numAttr(v){ const n=Number(v); return (v!=null && v!=='' && isFinite(n)) ? n : ''; }
+/* ⚠️ La fecha que devuelve la IA NO es la de hoy: es la que está IMPRESA en el
+   recibo o en la captura del banco. Muchas veces es la buena (fotografías el
+   ticket dos días después), así que no se puede pisar. Pero se colaba en
+   silencio en un campo que en el móvil casi no se mira, y un ingreso fechado
+   en julio no sale ni en el gráfico ni en el calendario de agosto: el usuario
+   creyó que la foto no había guardado nada. Ni se pisa ni se calla.
+   Las fechas imposibles (futuro, o de hace más de dos años) sí se descartan:
+   eso no es un recibo viejo, es un número mal leído. */
+function fechaIA(pre){
+  const hoy=todayISO();
+  if(!pre || !pre._ai) return {date:(pre&&pre.date)||hoy, aviso:''};
+  const d=String(pre.date||'');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return {date:hoy, aviso:''};
+  const limite=new Date(); limite.setFullYear(limite.getFullYear()-2);
+  if(d>hoy || d<isoDate(limite)) return {date:hoy, aviso:''};
+  if(d===hoy) return {date:d, aviso:''};
+  const bonita=new Date(d+'T12:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'long'});
+  return {date:d, aviso:`<div class="avisoFecha">Ojo: esta es la fecha que pone la foto (<b>${bonita}</b>), no la de hoy.
+    Si lo estás apuntando hoy, cámbiala, o no aparecerá en el gráfico ni en el calendario de este mes.</div>`};
+}
 
 /* ============ MODAL BASE ============ */
 /* Aviso de confirmación PROPIO. No se usa confirm() del navegador porque
@@ -2074,6 +2099,7 @@ function openIncome(pre,id){
   if(!state.accounts.length){ avisa('Te falta una cuenta','Antes de apuntar nada necesitas tener una cuenta. Toca <b>Disponible</b> en la pantalla de Inicio y luego "+ Añadir cuenta".'); return; }
   const ya = id ? state.incomes.find(x=>x.id===id) : null;
   pre = ya ? {amount:ya.amount, concept:ya.concept, date:ya.date, notes:ya.notes} : (pre||{});
+  const _f=fechaIA(pre);
   const banner=pre._ai?`<div class="hint" style="margin-bottom:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-10a2 2 0 0 1 2-2h3l1.6-2.5h6.8L17 6.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3.6"/></svg> Datos leídos por la IA. <b>Revísalos y corrígelos</b> si hace falta antes de guardar.</div>`:'';
   const acctId = ya ? ya.accountId : '';
   const sello = (ya&&ya.createdAt)
@@ -2082,7 +2108,7 @@ function openIncome(pre,id){
   openModal(`<h2>${ya?'Detalle del ingreso':'Nuevo ingreso'}</h2>${banner}
     <div class="fld"><label>Monto (${CUR})</label><input id="fAmt" type="number" inputmode="decimal" step="0.01" placeholder="0.00" value="${numAttr(pre.amount)}" ${ya?'':'autofocus'}></div>
     <div class="fld"><label>Concepto</label><input id="fConcept" placeholder="Ej. Nómina, venta..." value="${pre.concept?esc(pre.concept):''}"></div>
-    <div class="fld"><label>Fecha</label><input id="fDate" type="date" value="${pre.date||todayISO()}" max="${todayISO()}"></div>
+    <div class="fld"><label>Fecha</label><input id="fDate" type="date" value="${_f.date}" max="${todayISO()}">${_f.aviso}</div>
     <div class="fld"><label>¿A qué cuenta va?</label><select id="fAcct">${acctOptions(acctId)}</select></div>
     <div class="fld"><label>Nota (opcional)</label><input id="fNotes" value="${pre.notes?esc(pre.notes):(pre.bank?esc(pre.bank):'')}"></div>
     <div class="impacto" id="fImpacto"></div>
@@ -2116,6 +2142,7 @@ function openExpense(pre,id){
   if(!state.accounts.length){ avisa('Te falta una cuenta','Antes de apuntar nada necesitas tener una cuenta. Toca <b>Disponible</b> en la pantalla de Inicio y luego "+ Añadir cuenta".'); return; }
   const ya = id ? state.expenses.find(x=>x.id===id) : null;
   pre = ya ? {amount:ya.amount, concept:ya.concept, date:ya.date, notes:ya.notes} : (pre||{});
+  const _f=fechaIA(pre);
   const banner=pre._ai?`<div class="hint" style="margin-bottom:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-10a2 2 0 0 1 2-2h3l1.6-2.5h6.8L17 6.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3.6"/></svg> Datos leídos por la IA. <b>Revísalos y corrígelos</b> si hace falta antes de guardar.</div>`:'';
   let catId = ya ? ya.categoryId : '';
   if(!ya && pre.category){ const c=state.categories.find(x=>x.name.toLowerCase()===String(pre.category).toLowerCase()); if(c) catId=c.id; }
@@ -2128,7 +2155,7 @@ function openExpense(pre,id){
     <div class="fld"><label>Monto (${CUR})</label><input id="fAmt" type="number" inputmode="decimal" step="0.01" placeholder="0.00" value="${numAttr(pre.amount)}" ${ya?'':'autofocus'}></div>
     <div class="fld"><label>Concepto</label><input id="fConcept" placeholder="Ej. Supermercado..." value="${pre.concept?esc(pre.concept):(pre.store?esc(pre.store):'')}"></div>
     <div class="fld"><label>Categoría</label><select id="fCat">${catOptions(catId)}</select></div>
-    <div class="fld"><label>Fecha</label><input id="fDate" type="date" value="${pre.date||todayISO()}" max="${todayISO()}"></div>
+    <div class="fld"><label>Fecha</label><input id="fDate" type="date" value="${_f.date}" max="${todayISO()}">${_f.aviso}</div>
     <div class="fld"><label>¿De qué cuenta salió?</label><select id="fAcct">${acctOptions(acctId)}</select></div>
     <div class="fld"><label>Nota (opcional)</label><input id="fNotes" value="${pre.notes?esc(pre.notes):(pre.bank?esc(pre.bank):'')}"></div>
     <div class="impacto" id="fImpacto"></div>
