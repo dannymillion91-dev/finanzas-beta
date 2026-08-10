@@ -35,7 +35,13 @@ neón sobre negro.
 
 Paleta de las categorías, `PIE_PAL` (por puesto en la lista, nunca por gasto):
 `#4FF5A7 #56E1FF #A97BFF #FF5FA9 #FFD84F #FF8A4F #5C8CFF #63FFE0 #FF6B6B #B6F24F`.
-Barras: ingresos `#4FF5A7→#0C9A5E`, gastos `#56E1FF→#1668D6`.
+Barras: ingresos `#4FF5A7→#0C9A5E`, gastos `#FF4E76→#8E0B32` (rojo neón, el
+mismo `--red` de "sale dinero" arriba y sangre oscura abajo; antes eran azules,
+pero el azul no decía nada en una app donde el rosa ya significa gasto).
+
+**Una sola barra por periodo**: mide lo mayor de los dos y lleva su color; la
+sub-barra de dentro, pegada al suelo, mide lo menor y lleva el otro. El trozo
+de color que queda a la vista es la diferencia.
 
 ## Tipografía
 

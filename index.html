@@ -50,7 +50,7 @@
        porque el neón sólo es neón sobre negro. */
     --chart-bg:#000;
     --chart-ing:#4FF5A7;
-    --chart-gas:#56E1FF;
+    --chart-gas:#FF4E76;
     --chart-txt:#F4F5F7;
     --chart-mute:#7B8291;
     --chart-line:rgba(255,255,255,.07);
@@ -394,6 +394,11 @@
   .opt .oT{flex:1;min-width:0}
   .opt .oT b{display:block;font-size:14.5px;font-weight:500;color:var(--txt)}
   .opt .oT span{display:block;font-size:12px;color:var(--faint);margin-top:3px;font-weight:400}
+  /* La única fila que destruye algo. Va en rojo y sola en su bloque, para que
+     no se confunda con las de al lado con un dedazo. */
+  .opt.malo .oIco{background:rgba(255,78,118,.09);border-color:rgba(255,78,118,.28)}
+  .opt.malo .oIco svg{stroke:var(--red)}
+  .opt.malo .oT b{color:var(--red)}
 
   /* pasar de una tanda de cuotas a otra */
   .pagCuotas{display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -608,7 +613,11 @@
   .bAvgTxt{font-size:9.5px;fill:var(--chart-mute);font-weight:500}
   .bVal{font-family:var(--f-disp);font-size:9.5px;font-weight:600;text-anchor:middle;letter-spacing:-.02em}
   .bVal.ing{fill:#9BFFCF}
-  .bVal.gas{fill:#A7EEFF}
+  .bVal.gas{fill:#FFA8BE}
+  /* El número que va escrito DENTRO de la sub-barra: blanco con un filo negro
+     por detrás, que es lo único que se lee igual de bien sobre el verde y
+     sobre el rojo. Mismo truco que los porcentajes del pastel. */
+  .bVal.dentro{fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.5);stroke-width:2.6px}
   .bLbl{font-size:10px;fill:var(--chart-mute);font-weight:500;text-anchor:middle}
   .bLbl.now{fill:var(--chart-txt);font-weight:700}
   .bLeg{display:flex;justify-content:center;align-items:center;gap:15px;font-size:11.5px;
@@ -819,6 +828,15 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <button class="opt" onclick="restoreData()">
         <span class="oIco"><svg viewBox="0 0 24 24"><path d="M12 21V10m0 0-4 4m4-4 4 4"/><path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/></svg></span>
         <span class="oT"><b>Restaurar una copia</b><span>Sustituye lo de ahora por lo de la copia</span></span>
+        <span class="chev">›</span>
+      </button>
+    </div>
+
+    <div class="section-title">Empezar de nuevo</div>
+    <div class="table">
+      <button class="opt malo" onclick="reiniciarDatos()">
+        <span class="oIco"><svg viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 1 2.9 6.4"/><path d="M3.5 6.5V12H9"/></svg></span>
+        <span class="oT"><b>Poner mis datos a cero</b><span>Vacía lo apuntado. Te pide tu código</span></span>
         <span class="chev">›</span>
       </button>
     </div>
@@ -1066,7 +1084,7 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
    atrás, y eso es lo que hace que esto sirva de algo. */
 /* Se sube a mano en cada publicación. Sirve para saber de un vistazo si el
    móvil está enseñando la última versión o una copia guardada de antes. */
-const VERSION='12';
+const VERSION='13';
 const VERSION_FECHA='10 de agosto de 2026';
 const CUENTA='misFinanzas_cuenta';       /* nombre + sal. Nunca el código */
 const DATOS='misFinanzas_datos';         /* el bulto cifrado */
@@ -1855,49 +1873,65 @@ function renderBars(){
   _barsAnim=false;   /* ya subieron; los siguientes redibujados son sin animación */
 }
 
-/* Dos barras por periodo: ingresos (verde) y gastos (azul), planas con
-   degradado propio, esquinas redondeadas y un halo de luz de su color. */
+/* UNA barra por periodo, no dos. La barra entera mide lo MÁS grande de los dos
+   (ingresos o gastos) y lleva el color de quien gana: verde si ese día/semana/
+   mes entró más de lo que salió, rojo si salió más. Dentro, pegada al suelo,
+   una sub-barra del otro color que mide lo MENOR. Así el trozo de color que
+   queda a la vista es la diferencia: lo que de verdad te llevas o te falta.
+   Antes eran dos barras hermanas y había que compararlas a ojo. */
 const BAR={w:320, top:30, base:146, x0:44, x1:312, lblY:162, h:176};
-const BCOL={ing:['#4FF5A7','#0C9A5E'], gas:['#56E1FF','#1668D6']};
+const BCOL={ing:['#4FF5A7','#0C9A5E'], gas:['#FF4E76','#8E0B32']};
 function _barsSVG(periodos,tope,prom,eur0){
   const {w,top,base,x0,x1,lblY}=BAR;
   const n=periodos.length, slot=(x1-x0)/n;
-  const bw=Math.min(20,(slot-10-4)/2), alto=base-top;
+  const bw=Math.max(9,Math.min(26,slot-16)), alto=base-top;
   const yDe=v=>base-Math.max(0,Math.min(1,v/tope))*alto;
   const verVal=bw>=14;           /* si no caben los números, se ven tocando */
-  let rejilla='', fondo='', bIng='', bGas='', vals='', lbls='';
+  let rejilla='', fondo='', bIng='', bGas='', subs='', vals='', lbls='';
   [[tope,top],[tope/2,(top+base)/2],[0,base]].forEach(([v,y])=>{
     rejilla+=`<line class="bgLine" x1="${x0-4}" y1="${y}" x2="${x1}" y2="${y}"/>`+
              `<text class="bgTxt" x="${x0-8}" y="${y+3.5}" text-anchor="end">${v?eur0(v):CUR+'0'}</text>`;
   });
   periodos.forEach((s,i)=>{
-    const xs=x0+slot*i, par=2*bw+4, x=xs+(slot-par)/2;
+    const xs=x0+slot*i, bx=xs+(slot-bw)/2, cx=bx+bw/2;
     if(i===_barsSel) fondo+=`<rect class="bSel" x="${xs+2}" y="${top-14}" width="${slot-4}" height="${base-top+30}" rx="10"/>`;
     fondo+=`<rect class="bHit" x="${xs}" y="${top-16}" width="${slot}" height="${base-top+34}" onclick="barsPick(${i})"/>`;
-    const pend=[];
-    [['ing',s.ing,x],['gas',s.gas,x+bw+4]].forEach(([k,v,bx])=>{
-      if(v<=0) return;
+    const gana = s.ing>=s.gas ? 'ing' : 'gas';      /* quién manda ese periodo */
+    const pierde = gana==='ing' ? 'gas' : 'ing';
+    const may=Math.max(s.ing,s.gas), men=Math.min(s.ing,s.gas);
+    if(may>0){
       /* Una barra de 3px con 5px de redondeo DESAPARECE: el radio se come la
-         barra entera y parece que ese dato no existe. Pasó de verdad con un
-         ingreso pequeño al lado de un gasto grande. Altura mínima visible, y
+         barra entera y parece que ese dato no existe. Altura mínima visible, y
          el radio nunca mayor que la mitad de lo que mide. */
-      const h=Math.max(8,base-yDe(v)), y=base-h, r=Math.min(5,bw/2.2,h/2);
-      const b=`<rect class="bBar" x="${bx.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${r.toFixed(1)}" fill="url(#bg_${k})"/>`;
-      if(k==='ing') bIng+=b; else bGas+=b;
-      if(verVal) pend.push({k, cx:bx+bw/2, y:y-6, t:eur0(v)});
-    });
-    /* Los dos números de un mismo periodo se PISAN cuando las barras miden
-       casi lo mismo: salía "€240€252" de una pieza y no se entendía nada.
-       Si se cruzan, el de la barra más baja sube una línea. */
-    if(pend.length===2){
-      const an=t=>t.length*6;                       /* ancho aproximado */
-      const [a,b]=pend;
-      if(Math.abs(a.cx-b.cx) < (an(a.t)+an(b.t))/2+4 && Math.abs(a.y-b.y)<11){
-        const bajo = a.y>=b.y ? a : b;              /* el de la barra más baja */
-        bajo.y = Math.min(a.y,b.y)-11;
+      const H=Math.max(8,base-yDe(may)), yH=base-H, r=Math.min(5,bw/2.2,H/2);
+      const b=`<rect class="bBar" x="${bx.toFixed(1)}" y="${yH.toFixed(1)}" width="${bw.toFixed(1)}" height="${H.toFixed(1)}" rx="${r.toFixed(1)}" fill="url(#bg_${gana})"/>`;
+      if(gana==='ing') bIng+=b; else bGas+=b;
+      if(verVal) vals+=`<text class="bVal ${gana}" x="${cx.toFixed(1)}" y="${(yH-6).toFixed(1)}">${eur0(may)}</text>`;
+      let h=0;
+      if(men>0){
+        /* Nunca puede tapar la barra entera: si ingresos y gastos van casi
+           igualados, se deja siempre un dedo del color del que gana asomando,
+           que si no parece que ese periodo solo tuvo una cosa. */
+        h=Math.min(Math.max(5,base-yDe(men)), H-3);
+        const rs=Math.min(5,bw/2.2,h/2);
+        subs+=`<rect class="bBar bSub" x="${bx.toFixed(1)}" y="${(base-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${rs.toFixed(1)}" fill="url(#bg_${pierde})"/>`;
+      }
+      /* Dónde va el número del menor, por orden de preferencia:
+         1) dentro de su sub-barra, si cabe;
+         2) encima del número del mayor, si queda cielo por arriba;
+         3) dentro de la barra grande, justo debajo de su borde.
+         ⚠️ El (3) hace falta de verdad: con una barra que llega al techo no hay
+         sitio arriba, y al recortar la altura el número acababa escrito ENCIMA
+         del otro ("€171" sobre "€1850", ilegibles los dos). */
+      if(verVal && men>0){
+        if(h>=18)
+          vals+=`<text class="bVal dentro" x="${cx.toFixed(1)}" y="${(base-h+12.5).toFixed(1)}">${eur0(men)}</text>`;
+        else if(yH-17>=top-4)
+          vals+=`<text class="bVal ${pierde}" x="${cx.toFixed(1)}" y="${(yH-17).toFixed(1)}">${eur0(men)}</text>`;
+        else
+          vals+=`<text class="bVal dentro" x="${cx.toFixed(1)}" y="${(yH+13).toFixed(1)}">${eur0(men)}</text>`;
       }
     }
-    pend.forEach(p=>{ vals+=`<text class="bVal ${p.k}" x="${p.cx.toFixed(1)}" y="${p.y.toFixed(1)}">${p.t}</text>`; });
     lbls+=`<text class="bLbl${s.now?' now':''}" x="${(xs+slot/2).toFixed(1)}" y="${lblY}">${esc(s.now&&_barsMode==='sem'?'Esta semana':s.lbl)}</text>`;
   });
   let media='';
@@ -1919,6 +1953,7 @@ function _barsSVG(periodos,tope,prom,eur0){
       ${halo('hIng',BCOL.ing[0])}${halo('hGas',BCOL.gas[0])}</defs>
     ${rejilla}${fondo}
     <g filter="url(#hIng)">${bIng}</g><g filter="url(#hGas)">${bGas}</g>
+    <g>${subs}</g>
     ${media}${vals}${lbls}
   </svg></div>`;
 }
@@ -3345,6 +3380,46 @@ async function pasoCodigo(){
   CLAVE=claveNueva; _cc=null;
   closeModal();
   avisa('Código cambiado','A partir de ahora entras con el nuevo. <b>Las copias que guardaste antes siguen abriéndose con el código viejo</b>, así que no lo olvides del todo si quieres poder restaurarlas.');
+}
+
+/* ---- poner los datos a cero ----
+   Vacía lo apuntado pero NO borra la cuenta: el nombre y el código siguen
+   siendo los mismos. Eso es lo que lo diferencia de `borrarCuenta()`, que vive
+   en la pantalla de entrada y deja la app como recién instalada.
+   Dos puertas antes de vaciar: primero explicar qué se pierde, y después el
+   código de 6 números. Un botón así, a un solo toque, es un dedazo esperando. */
+function reiniciarDatos(){
+  askConfirm('Poner mis datos a cero',
+    'Vas a borrar <b>todos tus movimientos, cuentas, categorías y planes de ahorro</b>. Tu cuenta y tu código no cambian: lo único que pasa es que la app se queda vacía, como el primer día.<br><br><b>Esto no se puede deshacer.</b> Si quieres conservarlo, cancela y guarda antes una copia.',
+    'Continuar',
+    ()=>pideCodigoReinicio());
+}
+function pideCodigoReinicio(err){
+  openModal(`<h2>Escribe tu código</h2>
+    <div class="hint">El mismo de ${LARGO_COD} números con el que entras en la app. Sin él no se vacía nada.</div>
+    ${err?`<div class="errMsg">${err}</div>`:''}
+    <div class="fld"><input id="rzPin" type="password" inputmode="numeric" maxlength="${LARGO_COD}"
+      autocomplete="off" placeholder="${'·'.repeat(LARGO_COD)}" style="text-align:center;letter-spacing:.5em;font-size:20px"></div>
+    <div class="modal-btns"><button class="cancel" onclick="closeModal()">Cancelar</button>
+    <button class="danger" style="margin-right:0" onclick="confirmaReinicio()">Vaciarlo todo</button></div>`);
+  setTimeout(()=>{const i=document.getElementById('rzPin'); if(i) i.focus();},60);
+}
+async function confirmaReinicio(){
+  const v=(document.getElementById('rzPin')||{}).value||'';
+  if(v.length!==LARGO_COD) return fallo(`Tienen que ser ${LARGO_COD} números.`);
+  /* Se comprueba igual que al entrar: si con ese código no se descifra lo que
+     hay guardado, es que no era el suyo. El código no se guarda en ninguna
+     parte, así que no hay nada con lo que compararlo. */
+  try{
+    const c=JSON.parse(lsGet(CUENTA)||'{}');
+    const clave=await derivaClave(v,deB64(c.sal),c.vueltas||VUELTAS);
+    const g=lsGet(DATOS); if(g) await descifra(g,clave);
+  }catch(e){ return fallo('Ese no es tu código.'); }
+  state=vacio();
+  _barsSel=-1; _barsAnim=true; _pieSel=-1;
+  closeModal();
+  renderAll(); showView('resumen');
+  avisa('Todo a cero','La app se ha quedado vacía. Entras con el mismo código de siempre.');
 }
 /* Bloquear: la clave se borra de memoria y los datos vuelven a ser ruido. */
 function bloquear(){
